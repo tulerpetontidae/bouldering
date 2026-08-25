@@ -83,9 +83,12 @@ for s in sessions:
 
     if v:
         wk = monday(day).isoformat()
-        w = weeks.setdefault(wk, {"w": wk, "sessions": 0, "cells": {}, "kyu": 0})
+        w = weeks.setdefault(wk, {"w": wk, "sessions": 0, "cells": {}, "kyu": 0,
+                                   "dur": 0, "wall": 0})
         w["sessions"] += 1
         w["kyu"] += nconv
+        w["dur"] += int(s["dur"] or 0)       # whole session, door to door
+        w["wall"] += wall                    # seconds actually on a boulder
         for k, (a, sd) in per.items():
             cell = w["cells"].setdefault(str(k), [0, 0])
             cell[0] += a
@@ -96,7 +99,8 @@ if weeks:
     keys = sorted(weeks)
     cur, last = dt.date.fromisoformat(keys[0]), dt.date.fromisoformat(keys[-1])
     while cur <= last:
-        weeks.setdefault(cur.isoformat(), {"w": cur.isoformat(), "sessions": 0, "cells": {}, "kyu": 0})
+        weeks.setdefault(cur.isoformat(), {"w": cur.isoformat(), "sessions": 0, "cells": {},
+                                           "kyu": 0, "dur": 0, "wall": 0})
         cur += dt.timedelta(days=7)
 
 grades = sorted(grades_seen)
