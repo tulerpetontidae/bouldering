@@ -162,7 +162,7 @@
       <button class="bo-tab" role="tab" data-lm="cons" aria-selected="false">Consolidated</button>
       <button class="bo-tab" role="tab" data-lm="max" aria-selected="false">Hardest send</button>
     </div>
-    <svg class="bo-svg" id="bo-prog" viewBox="0 0 960 392" role="img"
+    <svg class="bo-svg" id="bo-prog" viewBox="0 0 960 410" role="img"
          aria-label="Share of attempts by grade over time, with the median grade sent"></svg>
   </div>
 
@@ -257,7 +257,7 @@
     var svg=document.getElementById("bo-time"), n=D.weeks.length;
     var W=LABW + n*CELL + n*GAP;                 // grid width
     var H=15 + 8*CELL + 15 + 9*GAP;              // month row + 8 grades + jp row
-    var PT=16, PB=16, PL=LABW+GAP;
+    var PT=30, PB=16, PL=LABW+GAP;
     svg.setAttribute("viewBox","0 0 "+W+" "+H);
     svg.setAttribute("width",W); svg.setAttribute("height",H);
     var mx=0; D.weeks.forEach(function(w){ if(w.dur>mx) mx=w.dur; });
@@ -268,7 +268,7 @@
       s+='<line x1="'+PL+'" y1="'+y(g)+'" x2="'+W+'" y2="'+y(g)+'" stroke="'+cssv("--rule-2")+'" vector-effect="non-scaling-stroke"/>';
       s+='<text x="'+(PL-5)+'" y="'+(y(g)+3)+'" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="9" fill="'+cssv("--muted")+'">'+g+'h</text>';
     }
-    noteMarks(colX, PT, H-PB, function(str){ s+=str; });
+    markLayer(colX, PT, H-PB, function(str){ s+=str; });
     D.weeks.forEach(function(w,i){
       if(!w.sessions) return;
       var r=3+Math.min(2.5,(w.sessions-1)*1.1);        // bigger dot = more sessions
@@ -392,24 +392,41 @@
     {at:"2025-11-24", text:"\uD83C\uDDEF\uD83C\uDDF5"},
     {from:"2026-06-29", to:"2026-07-20", text:"knee trauma"}
   ];
-  /* one dashed rule per note plus a label on the paper above the plot, so the
-     text never has to sit on top of a dark band */
-  function noteMarks(xOf, top, bottom, emit){
+  /* Marks above the plot. Context notes sit on the upper row, competitions on
+     the lower one, so a comp landing near a note can't collide with it. Both
+     labels live on the paper, never on top of a dark band. */
+  function weekIndex(nt){
+    var i0=-1,i1=-1;
+    D.weeks.forEach(function(w,i){
+      if(nt.at||nt.d){ var key=nt.at||nt.d; if(i0<0 && w.w>=key){ i0=i1=i; } return; }
+      if(w.w>=nt.from && i0<0) i0=i;
+      if(w.w<=nt.to) i1=i;
+    });
+    return i0<0 ? null : [i0, Math.max(i0,i1)];
+  }
+  function markLayer(xOf, top, bottom, emit){
+    var noteY=top-20, compY=top-6;
     NOTES.forEach(function(nt){
-      var i0=-1,i1=-1;
-      D.weeks.forEach(function(w,i){
-        if(nt.at){ if(w.w===nt.at||(i0<0&&w.w>=nt.at)){ if(i0<0) i0=i1=i; } return; }
-        if(w.w>=nt.from && i0<0) i0=i;
-        if(w.w<=nt.to) i1=i;
-      });
-      if(i0<0) return;
-      var xm=(xOf(i0)+xOf(Math.max(i0,i1)))/2;
+      var ix=weekIndex(nt); if(!ix) return;
+      var xm=(xOf(ix[0])+xOf(ix[1]))/2;
       emit('<line x1="'+xm.toFixed(1)+'" y1="'+top+'" x2="'+xm.toFixed(1)+'" y2="'+bottom+
-           '" stroke="'+cssv("--ink")+'" stroke-width="1" stroke-dasharray="3 3" opacity=".5" vector-effect="non-scaling-stroke"/>');
-      emit('<text x="'+xm.toFixed(1)+'" y="'+(top-6)+'" text-anchor="middle" font-family="IBM Plex Mono,monospace" '+
+           '" stroke="'+cssv("--ink")+'" stroke-width="1" stroke-dasharray="3 3" opacity=".45" vector-effect="non-scaling-stroke"/>');
+      emit('<text x="'+xm.toFixed(1)+'" y="'+noteY+'" text-anchor="middle" font-family="IBM Plex Mono,monospace" '+
            'font-size="10" fill="'+cssv("--ink")+'" opacity=".8">'+nt.text+'</text>');
     });
+    COMPS.forEach(function(c){
+      var ix=weekIndex(c); if(!ix) return;
+      var xm=xOf(ix[0]), col=cssv("--s2");
+      emit('<line x1="'+xm.toFixed(1)+'" y1="'+top+'" x2="'+xm.toFixed(1)+'" y2="'+bottom+
+           '" stroke="'+col+'" stroke-width="1" stroke-dasharray="2 4" opacity=".5" vector-effect="non-scaling-stroke"/>');
+      // a small diamond sitting on the top edge marks the comp itself
+      emit('<path d="M'+xm.toFixed(1)+','+(top-4)+' l3.5,3.5 l-3.5,3.5 l-3.5,-3.5 Z" fill="'+col+'"/>');
+      emit('<text x="'+xm.toFixed(1)+'" y="'+compY+'" text-anchor="middle" font-family="IBM Plex Mono,monospace" '+
+           'font-size="9" fill="'+col+'">'+c.name.split(" ")[0]+' '+(c.pts/1000).toFixed(1)+'k'+
+           '<title>'+c.name+' — '+c.pts.toLocaleString()+' points</title></text>');
+    });
   }
+
   function windowStats(i0){                    // [i0, i0+WIN) over D.weeks
     var t={}, att=0, snd=0;
     for(var i=i0;i<Math.min(D.weeks.length,i0+WIN);i++){
@@ -463,10 +480,10 @@
   }
   function drawMix(){
     var svg=document.getElementById("bo-prog");
-    var W=960,H=392,PL=40,PR=54;
+    var W=960,H=410,PL=40,PR=54;
     /* two panels sharing one x-axis — the mix is a share (0-100%) and the grade
        sent is a grade, so they must not share a y-scale */
-    var A_T=30,A_B=250, B_T=284,B_B=356, PB=34;
+    var A_T=48,A_B=268, B_T=302,B_B=374, PB=34;
     var n=D.weeks.length, gs=D.grades;
     var pts=[];                                   // one rolling window per week
     for(var i=0;i<=n-1;i++){
@@ -497,7 +514,7 @@
     var lo=Math.min.apply(null,mv), hi=Math.max.apply(null,mv);
     if(hi-lo<1){ var mid=(lo+hi)/2; lo=mid-0.6; hi=mid+0.6; } else { lo-=0.35; hi+=0.35; }
     var yg=function(g){ return B_T+(B_B-B_T)*(1-(g-lo)/((hi-lo)||1)); };
-    noteMarks(x, A_T, B_B, function(str){ s+=str; });
+    markLayer(x, A_T, B_B, function(str){ s+=str; });
 
     // panel 2 chrome
     s+='<line x1="'+PL+'" y1="'+B_B+'" x2="'+(W-PR)+'" y2="'+B_B+'" stroke="'+cssv("--rule")+'" vector-effect="non-scaling-stroke"/>';
