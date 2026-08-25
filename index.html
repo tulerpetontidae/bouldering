@@ -147,11 +147,16 @@
     <h2 class="bo-h">Is the level moving?</h2>
     <p class="bo-p">Every band is a grade, and its thickness is the share of my attempts sitting there in that
        3-week window. Progress looks like the pale easy grades draining away at the bottom while the dark ones
-       swell — the whole mix marching upward. Below it, the 3-week rolling <em>average</em> grade I actually sent.</p>
+       swell — the whole mix marching upward. The panel below tracks the level itself — all three metrics ignore how many
+       easy boulders a session happened to include, so a long warm-up can't drag them down.</p>
     <div class="bo-legend" id="bo-mixleg" style="margin:14px 0 2px"></div>
+    <div class="bo-tabs" role="tablist" aria-label="Level metric" style="margin:12px 0 0">
+      <button class="bo-tab" role="tab" data-lm="top5" aria-selected="true">Top 5 sends</button>
+      <button class="bo-tab" role="tab" data-lm="cons" aria-selected="false">Consolidated</button>
+      <button class="bo-tab" role="tab" data-lm="max" aria-selected="false">Hardest send</button>
+    </div>
     <svg class="bo-svg" id="bo-prog" viewBox="0 0 960 392" role="img"
          aria-label="Share of attempts by grade over time, with the median grade sent"></svg>
-    <p class="bo-p" id="bo-mixnote" style="margin-top:10px"></p>
   </div>
 
   <div class="bo-grid">
@@ -171,12 +176,12 @@
 
     <div class="bo-card" style="margin-top:0">
       <h2 class="bo-h">Where the wall wins</h2>
-      <p class="bo-p">Send rate by grade over the <b>last 3 weeks</b>, with the all-time rate behind it for
-         context. The grade where the recent rate crosses 50% is a fair description of the level right now.</p>
+      <p class="bo-p">Send rate by grade over the <b>last 3 weeks</b>. The grade where it crosses 50% is a fair
+         description of the level right now.</p>
       <div class="bo-wrap" style="max-height:none">
         <table class="bo-tbl">
           <thead><tr><th>Grade</th><th>Tried</th><th>Sent</th><th>Rate</th>
-            <th style="width:34%">vs all-time</th></tr></thead>
+            <th style="width:34%"></th></tr></thead>
           <tbody id="bo-rate"></tbody>
         </table>
       </div>
@@ -315,14 +320,33 @@
     var b=new Date(D.weeks[j].w+"T00:00:00"); b.setDate(b.getDate()+6);
     return fdate(a.toISOString().slice(0,10))+" – "+fdate(b.toISOString().slice(0,10));
   }
-  /* mean grade over per-grade counts — a median of whole grades only ever steps
-     between integers, which reads as flat; the mean actually moves */
-  function meanOf(byGrade,idx){
-    var n=0,t=0;
-    Object.keys(byGrade).forEach(function(k){ var c=byGrade[k][idx]; n+=c; t+=c*(+k); });
-    return n? t/n : null;
+  function gnameF(v){
+    var x=v-1;
+    if(x<0) return "VB";
+    return Number.isInteger(x) ? "V"+x : "V"+x.toFixed(1);
   }
-  function gnameF(v){ var x=v-1; return x<0 ? "VB" : "V"+x.toFixed(1); }
+  /* expand per-grade counts back into a sorted list of grades, hardest first */
+  function sentList(byGrade){
+    var f=[];
+    Object.keys(byGrade).forEach(function(k){ for(var i=0;i<byGrade[k][1];i++) f.push(+k); });
+    return f.sort(function(a,b){ return b-a; });
+  }
+  var LEVEL={
+    /* mean of the hardest 5 sends — smooth, and blind to warm-up volume */
+    top5:{ label:"TOP 5 SENDS, AVERAGED · 3-WEEK ROLLING",
+      fn:function(bg){ var f=sentList(bg); if(!f.length) return null;
+        var t=f.slice(0,Math.min(5,f.length));
+        return t.reduce(function(a,b){ return a+b; },0)/t.length; } },
+    /* hardest grade sent at least 3 times — the grade that has become routine */
+    cons:{ label:"HARDEST GRADE SENT 3+ TIMES · 3-WEEK ROLLING",
+      fn:function(bg){ var best=null;
+        Object.keys(bg).forEach(function(k){ if(bg[k][1]>=3 && (best===null||+k>best)) best=+k; });
+        return best; } },
+    /* the ceiling — spiky by nature, one good day moves it */
+    max:{ label:"HARDEST SINGLE SEND · 3-WEEK ROLLING",
+      fn:function(bg){ var f=sentList(bg); return f.length?f[0]:null; } }
+  };
+  var LM="top5";
 
   /* ---------- grade mix over time ---------- */
   var ORD=["#86b6ef","#6da7ec","#5598e7","#3987e5","#2a78d6","#256abf","#184f95","#0d366b"];
@@ -361,11 +385,12 @@
       prev=top;
     });
     // the grade actually being sent, over the same window
-    var med=pts.map(function(p){ return meanOf(p.w.byGrade,1); });
+    var med=pts.map(function(p){ return LEVEL[LM].fn(p.w.byGrade); });
     /* scale this panel to its own data, not the whole grade ladder — over the
        full VB..V6 range a 1.5-grade climb is invisible */
     var mv=med.filter(function(v){ return v!=null; });
-    var lo=Math.min.apply(null,mv)-0.35, hi=Math.max.apply(null,mv)+0.35;
+    var lo=Math.min.apply(null,mv), hi=Math.max.apply(null,mv);
+    if(hi-lo<1){ var mid=(lo+hi)/2; lo=mid-0.6; hi=mid+0.6; } else { lo-=0.35; hi+=0.35; }
     var yg=function(g){ return B_T+(B_B-B_T)*(1-(g-lo)/((hi-lo)||1)); };
     // panel 2 chrome
     s+='<line x1="'+PL+'" y1="'+B_B+'" x2="'+(W-PR)+'" y2="'+B_B+'" stroke="'+cssv("--rule")+'" vector-effect="non-scaling-stroke"/>';
@@ -374,7 +399,7 @@
       s+='<line x1="'+PL+'" y1="'+yg(g.gs)+'" x2="'+(W-PR)+'" y2="'+yg(g.gs)+'" stroke="'+cssv("--rule-2")+'" vector-effect="non-scaling-stroke"/>';
       s+='<text x="'+(PL-8)+'" y="'+(yg(g.gs)+3.5)+'" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="'+cssv("--muted")+'">'+g.key+'</text>';
     });
-    s+='<text x="'+PL+'" y="'+(B_T-8)+'" font-family="IBM Plex Mono,monospace" font-size="9.5" letter-spacing=".08em" fill="'+cssv("--muted")+'">AVERAGE GRADE SENT · 3-WEEK ROLLING</text>';
+    s+='<text x="'+PL+'" y="'+(B_T-8)+'" font-family="IBM Plex Mono,monospace" font-size="9.5" letter-spacing=".08em" fill="'+cssv("--muted")+'">'+LEVEL[LM].label+'</text>';
     var seg=[], run=[];
     med.forEach(function(v,k){ if(v==null){ if(run.length)seg.push(run); run=[]; } else run.push([k,v]); });
     if(run.length) seg.push(run);
@@ -414,16 +439,6 @@
         return '<span class="bo-key"><i style="background:'+ordColor(gs.length-1-k,gs.length)+'"></i>'+g.key+'</span>';
       }).join("");
 
-    // spell out the headline in words so the chart isn't the only thing carrying it
-    var first=pts[0].w, last=pts[pts.length-1].w;
-    function shareAtOrAbove(w,gs0){
-      var t=0; Object.keys(w.byGrade).forEach(function(k){ if(+k>=gs0) t+=w.byGrade[k][0]; });
-      return w.att? t/w.att*100 : 0;
-    }
-    var hard=gs[Math.max(0,gs.length-4)].gs;         // V3 and up on this data
-    document.getElementById("bo-mixnote").innerHTML=
-      "At the start, "+Math.round(shareAtOrAbove(first,hard))+"% of my attempts were "+gname(hard)+
-      " or harder. In the last three weeks that's <b>"+Math.round(shareAtOrAbove(last,hard))+"%</b>.";
   }
 
   /* ---------- pyramid, two draggable windows ---------- */
@@ -465,15 +480,12 @@
     document.getElementById("bo-rate").innerHTML=D.grades.slice().reverse().map(function(g){
       var c=recent.byGrade[g.gs], a=c?c[0]:0, sd=c?c[1]:0;
       var r=a?Math.round(sd/a*100):null;
-      var all=D.byGrade[g.gs], ar=all[0]?Math.round(all[1]/all[0]*100):0;
       return '<tr><td>'+g.key+'</td><td>'+(a||'—')+'</td><td>'+(a?sd:'—')+'</td>'+
              '<td>'+(r==null?'—':r+'%')+'</td>'+
-             '<td><span class="bo-bar ghost" style="width:'+ar+'%"></span>'+
-             (r==null?'':'<br><span class="bo-bar" style="width:'+r+'%"></span>')+'</td></tr>';
+             '<td>'+(r==null?'':'<span class="bo-bar" style="width:'+r+'%"></span>')+'</td></tr>';
     }).join("");
     document.getElementById("bo-ratenote").textContent=
-      "Last 3 weeks: "+recent.att+" attempts, "+recent.snd+" sends. "+
-      "The faint bar is the all-time rate for that grade.";
+      "Last 3 weeks: "+recent.att+" attempts, "+recent.snd+" sends.";
 
     document.getElementById("bo-log").innerHTML=D.sessions.slice().reverse().map(function(s){
       var r=s.n?Math.round(s.s/s.n*100):0;
@@ -530,10 +542,18 @@
     });
   }
 
-  Array.prototype.forEach.call(document.querySelectorAll(".bo-tab"),function(b){
+  Array.prototype.forEach.call(document.querySelectorAll(".bo-tab[data-lm]"),function(b){
+    b.addEventListener("click",function(){
+      LM=b.getAttribute("data-lm");
+      Array.prototype.forEach.call(document.querySelectorAll(".bo-tab[data-lm]"),function(o){
+        o.setAttribute("aria-selected", o===b ? "true":"false"); });
+      drawMix();
+    });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll(".bo-tab[data-m]"),function(b){
     b.addEventListener("click",function(){
       MEASURE=b.getAttribute("data-m");
-      Array.prototype.forEach.call(document.querySelectorAll(".bo-tab"),function(o){
+      Array.prototype.forEach.call(document.querySelectorAll(".bo-tab[data-m]"),function(o){
         o.setAttribute("aria-selected", o===b ? "true":"false"); });
       drawHeat(); hideTip();
     });
