@@ -58,6 +58,8 @@
 
   .bo-scroll{overflow-x:auto;padding-bottom:6px;margin-top:14px}
   .bo-hm{display:grid;gap:2px;width:max-content}
+  .bo-hm[hidden]{display:none}    /* display:grid above would beat the attribute */
+  #bo-time{width:auto;max-width:none}   /* sized in px to match the grid exactly */
   .bo-hcell{width:17px;height:17px;border-radius:2px;background:var(--q0)}
   .bo-hcell[data-v]{cursor:pointer}
   .bo-hcell[data-v]:hover{outline:2px solid var(--ink);outline-offset:1px}
@@ -81,6 +83,7 @@
   .bo-tip b{font-weight:600}
 
   .bo-svg{display:block;width:100%;height:auto;overflow:visible}
+  .bo-svg[hidden]{display:none}   /* display:block above would beat the attribute */
   .bo-grid{display:grid;grid-template-columns:1.35fr 1fr;gap:18px;margin-top:18px}
   @media(max-width:860px){ .bo-grid{grid-template-columns:1fr} }
 
@@ -94,6 +97,10 @@
   .bo-wrap{max-height:420px;overflow-y:auto;margin-top:12px}
   .bo-bar{display:inline-block;height:8px;border-radius:2px;background:var(--s1);vertical-align:middle}
   .bo-bar.ghost{background:var(--rule);opacity:.9}
+  .bo-comp{font-family:var(--mono);font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;
+    color:var(--s2);border:1px solid var(--s2);border-radius:99px;padding:1px 6px;margin-left:6px;white-space:nowrap}
+  .bo-comp a{color:inherit;text-decoration:underline;text-underline-offset:2px}
+  .bo-isComp td{background:color-mix(in srgb, var(--s2) 7%, transparent)}
 
   .bo-sliders{margin:14px 0 2px;display:flex;flex-direction:column;gap:9px}
   .bo-sl{display:grid;grid-template-columns:126px 1fr;align-items:center;gap:10px}
@@ -121,8 +128,7 @@
   <div class="bo-hero">
     <div class="bo-eyebrow" id="bo-range">—</div>
     <h1 class="bo-title">Bouldering</h1>
-    <p class="bo-sub">Every boulder my watch has recorded — what I tried, what I sent, and whether the
-       level is actually moving. One row per grade, one column per week.</p>
+    <p class="bo-sub">I have too much fun on the wall! Here is every boulder my watch has recorded.</p>
     <div class="bo-facts" id="bo-facts"></div>
   </div>
 
@@ -136,7 +142,8 @@
       <button class="bo-tab" role="tab" data-m="rate" aria-selected="false">Send rate</button>
       <button class="bo-tab" role="tab" data-m="time" aria-selected="false">Time in the gym</button>
     </div>
-    <div class="bo-scroll"><div class="bo-hm" id="bo-hm"></div></div>
+    <div class="bo-scroll"><div class="bo-hm" id="bo-hm"></div><svg class="bo-svg" id="bo-time"
+         role="img" hidden aria-label="Hours in the gym per week"></svg></div>
     <div class="bo-legend">
       <span id="bo-legtext">Attempts per week</span>
       <span class="bo-ramp" id="bo-ramp"></span>
@@ -148,8 +155,7 @@
     <h2 class="bo-h">Is the level moving?</h2>
     <p class="bo-p">Every band is a grade, and its thickness is the share of my attempts sitting there in that
        3-week window. Progress looks like the pale easy grades draining away at the bottom while the dark ones
-       swell — the whole mix marching upward. The panel below tracks the level itself — all three metrics ignore how many
-       easy boulders a session happened to include, so a long warm-up can't drag them down.</p>
+       swell — the whole mix marching upward.</p>
     <div class="bo-legend" id="bo-mixleg" style="margin:14px 0 2px"></div>
     <div class="bo-tabs" role="tablist" aria-label="Level metric" style="margin:12px 0 0">
       <button class="bo-tab" role="tab" data-lm="top5" aria-selected="true">Top 5 sends</button>
@@ -243,11 +249,61 @@
     var t=Math.min(1, v/mx);
     return Math.min(RAMP.length-1, Math.max(0, Math.ceil(t*RAMP.length)-1));
   }
+  /* Same footprint and column positions as the heatmap grid, so switching tabs
+     doesn't move anything: 26px label gutter, 17px cells, 2px gaps. */
+  var CELL=17, GAP=2, LABW=26;
+  function colX(i){ return LABW + GAP + i*(CELL+GAP) + CELL/2; }
+  function drawTime(){
+    var svg=document.getElementById("bo-time"), n=D.weeks.length;
+    var W=LABW + n*CELL + n*GAP;                 // grid width
+    var H=15 + 8*CELL + 15 + 9*GAP;              // month row + 8 grades + jp row
+    var PT=16, PB=16, PL=LABW+GAP;
+    svg.setAttribute("viewBox","0 0 "+W+" "+H);
+    svg.setAttribute("width",W); svg.setAttribute("height",H);
+    var mx=0; D.weeks.forEach(function(w){ if(w.dur>mx) mx=w.dur; });
+    var top=Math.ceil(mx/3600) || 1;
+    var y=function(h){ return PT+(H-PT-PB)*(1-h/top); };
+    var s="";
+    for(var g=0; g<=top+0.001; g+=2){
+      s+='<line x1="'+PL+'" y1="'+y(g)+'" x2="'+W+'" y2="'+y(g)+'" stroke="'+cssv("--rule-2")+'" vector-effect="non-scaling-stroke"/>';
+      s+='<text x="'+(PL-5)+'" y="'+(y(g)+3)+'" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="9" fill="'+cssv("--muted")+'">'+g+'h</text>';
+    }
+    noteMarks(colX, PT, H-PB, function(str){ s+=str; });
+    D.weeks.forEach(function(w,i){
+      if(!w.sessions) return;
+      var r=3+Math.min(2.5,(w.sessions-1)*1.1);        // bigger dot = more sessions
+      s+='<circle cx="'+colX(i).toFixed(1)+'" cy="'+y(w.dur/3600).toFixed(1)+'" r="'+r.toFixed(1)+
+         '" fill="'+cssv("--s1")+'" stroke="'+cssv("--paper")+'" stroke-width="1.2" opacity=".9"><title>'+
+         fdate(w.w)+': '+(w.dur/3600).toFixed(1)+'h over '+w.sessions+' session'+(w.sessions===1?'':'s')+'</title></circle>';
+    });
+    var lastX=-99, lastM=-1;
+    D.weeks.forEach(function(w,i){
+      var d=new Date(w.w+"T00:00:00"), m=d.getMonth();
+      if(m===lastM) return; lastM=m;
+      var px=colX(i); if(px-lastX<34) return; lastX=px;
+      s+='<text x="'+px+'" y="'+(H-4)+'" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9" fill="'+cssv("--muted")+'" letter-spacing=".08em">'+MON[m].toUpperCase()+'</text>';
+    });
+    s+='<line x1="'+PL+'" y1="'+(H-PB)+'" x2="'+W+'" y2="'+(H-PB)+'" stroke="'+cssv("--rule")+'" vector-effect="non-scaling-stroke"/>';
+    svg.innerHTML=s;
+  }
+
   function drawHeat(){
     var el=document.getElementById("bo-hm"), W=D.weeks.length, mx=scaleMax();
+    var isTime=(MEASURE==="time");
+    /* SVGElement has no `hidden` IDL property, so assigning it silently does
+       nothing to the attribute — toggle the attribute itself */
+    var tsvg=document.getElementById("bo-time");
+    if(isTime) tsvg.removeAttribute("hidden"); else tsvg.setAttribute("hidden","");
+    el.hidden=isTime;
+    if(isTime){
+      drawTime();
+      document.getElementById("bo-legtext").textContent="Hours in the gym, per week — bigger dot, more sessions";
+      document.getElementById("bo-ramp").innerHTML="";
+      document.getElementById("bo-legmax").textContent="";
+      return;
+    }
     el.style.gridTemplateColumns="26px repeat("+W+",17px)";
-    /* time is one number per week, not per grade, so it gets a single row */
-    var gs = MEASURE==="time" ? [{gs:"__t", key:"hrs"}] : D.grades.slice().reverse();
+    var gs = D.grades.slice().reverse();     // hardest at the top
     var h="";
     // month ruler — skip a label if the previous one is too close to read
     h+='<div></div>';
@@ -262,9 +318,7 @@
     gs.forEach(function(g){
       h+='<div class="bo-glab">'+g.key+'</div>';
       D.weeks.forEach(function(w,i){
-        var cell = MEASURE==="time" ? (w.dur?[w.dur,w.wall]:null) : w.cells[g.gs];
-        var v = MEASURE==="time" ? (w.dur||null) : cellValue(cell);
-        var st=stepFor(v,mx);
+        var cell=w.cells[g.gs], v=cellValue(cell), st=stepFor(v,mx);
         var bg=st==null?"var(--q0)":"var("+RAMP[st]+")";
         h+='<div class="bo-hcell"'+(cell?' data-v="1" data-w="'+i+'" data-g="'+g.gs+'" tabindex="0"':'')+
            ' style="background:'+bg+'"></div>';
@@ -323,8 +377,39 @@
      Everything below a certain size is noise at session level, so the comparison
      views all work on a WIN-week window rather than on single sessions. */
   var WIN=3;
-  /* margin notes on the timeline - add more as {from,to,text} */
-  var NOTES=[{from:"2026-06-29", to:"2026-07-20", text:"knee trauma"}];
+  /* margin notes on the timeline. {at} for a moment, {from,to} for a span
+     (drawn at its midpoint). Add more freely. */
+  /* competitions. Set `url` on either to turn the name into a link. */
+  var COMPS=[
+    {d:"2026-05-16", name:"Hyperion", pts:5601, url:""},
+    {d:"2026-08-02", name:"Dogpatch Boulders", pts:7233, url:""}
+  ];
+  function compOn(day){
+    for(var i=0;i<COMPS.length;i++) if(COMPS[i].d===day) return COMPS[i];
+    return null;
+  }
+  var NOTES=[
+    {at:"2025-11-24", text:"\uD83C\uDDEF\uD83C\uDDF5"},
+    {from:"2026-06-29", to:"2026-07-20", text:"knee trauma"}
+  ];
+  /* one dashed rule per note plus a label on the paper above the plot, so the
+     text never has to sit on top of a dark band */
+  function noteMarks(xOf, top, bottom, emit){
+    NOTES.forEach(function(nt){
+      var i0=-1,i1=-1;
+      D.weeks.forEach(function(w,i){
+        if(nt.at){ if(w.w===nt.at||(i0<0&&w.w>=nt.at)){ if(i0<0) i0=i1=i; } return; }
+        if(w.w>=nt.from && i0<0) i0=i;
+        if(w.w<=nt.to) i1=i;
+      });
+      if(i0<0) return;
+      var xm=(xOf(i0)+xOf(Math.max(i0,i1)))/2;
+      emit('<line x1="'+xm.toFixed(1)+'" y1="'+top+'" x2="'+xm.toFixed(1)+'" y2="'+bottom+
+           '" stroke="'+cssv("--ink")+'" stroke-width="1" stroke-dasharray="3 3" opacity=".5" vector-effect="non-scaling-stroke"/>');
+      emit('<text x="'+xm.toFixed(1)+'" y="'+(top-6)+'" text-anchor="middle" font-family="IBM Plex Mono,monospace" '+
+           'font-size="10" fill="'+cssv("--ink")+'" opacity=".8">'+nt.text+'</text>');
+    });
+  }
   function windowStats(i0){                    // [i0, i0+WIN) over D.weeks
     var t={}, att=0, snd=0;
     for(var i=i0;i<Math.min(D.weeks.length,i0+WIN);i++){
@@ -381,7 +466,7 @@
     var W=960,H=392,PL=40,PR=54;
     /* two panels sharing one x-axis — the mix is a share (0-100%) and the grade
        sent is a grade, so they must not share a y-scale */
-    var A_T=12,A_B=240, B_T=274,B_B=356, PB=34;
+    var A_T=30,A_B=250, B_T=284,B_B=356, PB=34;
     var n=D.weeks.length, gs=D.grades;
     var pts=[];                                   // one rolling window per week
     for(var i=0;i<=n-1;i++){
@@ -412,16 +497,7 @@
     var lo=Math.min.apply(null,mv), hi=Math.max.apply(null,mv);
     if(hi-lo<1){ var mid=(lo+hi)/2; lo=mid-0.6; hi=mid+0.6; } else { lo-=0.35; hi+=0.35; }
     var yg=function(g){ return B_T+(B_B-B_T)*(1-(g-lo)/((hi-lo)||1)); };
-    // margin notes: a tinted span with a label, drawn under the line
-    NOTES.forEach(function(nt){
-      var i0=-1,i1=-1;
-      D.weeks.forEach(function(w,i){ if(w.w>=nt.from && i0<0) i0=i; if(w.w<=nt.to) i1=i; });
-      if(i0<0||i1<i0) return;
-      var xa=x(i0), xb=x(i1);
-      s+='<rect x="'+xa.toFixed(1)+'" y="'+A_T+'" width="'+Math.max(2,xb-xa).toFixed(1)+'" height="'+(B_B-A_T)+'" fill="'+cssv("--ink")+'" opacity=".07"/>';
-      s+='<line x1="'+xa.toFixed(1)+'" y1="'+A_T+'" x2="'+xa.toFixed(1)+'" y2="'+B_B+'" stroke="'+cssv("--ink")+'" stroke-width="1" stroke-dasharray="2 3" opacity=".45" vector-effect="non-scaling-stroke"/>';
-      s+='<text x="'+(xa+4).toFixed(1)+'" y="'+(A_T+11)+'" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="'+cssv("--ink")+'" opacity=".75">'+nt.text+'</text>';
-    });
+    noteMarks(x, A_T, B_B, function(str){ s+=str; });
 
     // panel 2 chrome
     s+='<line x1="'+PL+'" y1="'+B_B+'" x2="'+(W-PR)+'" y2="'+B_B+'" stroke="'+cssv("--rule")+'" vector-effect="non-scaling-stroke"/>';
@@ -533,8 +609,12 @@
 
     document.getElementById("bo-log").innerHTML=D.sessions.slice().reverse().map(function(s){
       var r=s.n?Math.round(s.s/s.n*100):0;
-      return '<tr><td>'+fdate(s.d)+' '+String(new Date(s.d+"T00:00:00").getFullYear()).slice(2)+
-             (s.kyu?' 🇯🇵':'')+'</td>'+
+      var cp=compOn(s.d);
+      var badge = cp ? (' <span class="bo-comp">'+
+          (cp.url?('<a href="'+cp.url+'" target="_blank" rel="noopener">'+cp.name+'</a>'):cp.name)+
+          ' · '+cp.pts.toLocaleString()+'</span>') : '';
+      return '<tr'+(cp?' class="bo-isComp"':'')+'><td>'+fdate(s.d)+' '+String(new Date(s.d+"T00:00:00").getFullYear()).slice(2)+
+             (s.kyu?' 🇯🇵':'')+badge+'</td>'+
              '<td>'+s.n+'</td><td>'+s.s+'</td><td>'+r+'%</td>'+
              '<td>'+(s.max!=null?gname(s.max):'—')+'</td>'+
              '<td>'+(s.med!=null?gname(s.med):'—')+'</td>'+
@@ -567,7 +647,11 @@
         'was graded in Japanese kyu; those '+kyu.reduce(function(x,s){return x+s.kyu;},0)+
         ' boulders are converted to the V-scale with the standard table (5級→V2, 4級→V3, 3級→V4). '+
         'The conversion is approximate and gym-dependent.'):'')+
-      ' Roped climbing is logged separately and is not on this page.';
+      ' Roped climbing is logged separately and is not on this page.'+
+      (COMPS.length ? ('<br>Competitions: '+COMPS.map(function(c){
+        var nm = c.url ? ('<a href="'+c.url+'" target="_blank" rel="noopener">'+c.name+'</a>') : c.name;
+        return nm+' on '+fdate(c.d)+' '+new Date(c.d).getFullYear()+' — '+c.pts.toLocaleString()+' points';
+      }).join('; ')+'.') : '');
   }
 
   function drawAll(){ drawHeat(); drawMix(); drawPyr(); drawTables(); drawHead(); }
