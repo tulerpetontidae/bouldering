@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bouldering · progress log</title>
+<meta name="description" content="Every boulder logged since October 2025 — grades tried, grades sent, and how the level has moved.">
+<meta name="theme-color" content="#14130F">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@400;600;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  .bo{
+    --page:#F2F0EB; --paper:#FFFFFF; --ink:#14130F; --ink-2:#4A4844; --muted:#8A8781; --muted-d:#A5A29A;
+    --rule:#DDDAD2; --rule-2:#ECEAE4;
+    /* data marks — validated against this surface, light and dark (see README) */
+    --s1:#2a78d6; --s2:#eb6834; --good:#006300;
+    --hero-bg:#14130F; --hero-fg:#F2F0EB; --hero-line:transparent;
+    --q0:#EFEDE7; --q1:#cde2fb; --q2:#9ec5f4; --q3:#6da7ec; --q4:#3987e5; --q5:#256abf; --q6:#104281;
+    --disp:'Big Shoulders Display','Arial Narrow',sans-serif;
+    --body:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    --mono:'IBM Plex Mono','SF Mono',Menlo,monospace;
+    font-family:var(--body); color:var(--ink); line-height:1.45;
+    max-width:1120px; margin:0 auto; padding:0 16px 56px; -webkit-font-smoothing:antialiased;
+  }
+  .bo *{box-sizing:border-box}
+  html,body{background:var(--page);margin:0}
+  @media (prefers-color-scheme:dark){
+    html,body{background:#0D0D0C}
+    .bo{ --page:#0D0D0C; --paper:#1a1a19; --ink:#FFFFFF; --ink-2:#C3C2B7; --muted:#898781; --muted-d:#75736E;
+         --rule:#2C2C2A; --rule-2:#232322;
+         --s1:#3987e5; --s2:#d95926; --good:#0ca30c;
+         --hero-bg:#1F1E1C; --hero-fg:#FFFFFF; --hero-line:#2C2C2A;
+         --q0:#232322; --q1:#0d366b; --q2:#184f95; --q3:#256abf; --q4:#3987e5; --q5:#6da7ec; --q6:#9ec5f4; }
+  }
+
+  .bo-hero{background:var(--hero-bg);color:var(--hero-fg);border:1px solid var(--hero-line);border-radius:3px;padding:30px 28px 26px;position:relative;overflow:hidden;margin-top:22px}
+  .bo-hero::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;
+    background:linear-gradient(90deg,var(--q1),var(--q3),var(--q5),var(--q6))}
+  .bo-eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;opacity:.66}
+  .bo-title{font-family:var(--disp);font-weight:800;font-size:clamp(44px,9vw,76px);line-height:.9;margin:10px 0 0;letter-spacing:-.01em}
+  .bo-sub{font-size:13.5px;opacity:.8;margin-top:10px;max-width:60ch}
+  .bo-facts{display:flex;flex-wrap:wrap;gap:26px;margin-top:22px}
+  .bo-fact{font-family:var(--mono);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;opacity:.62}
+  .bo-fact b{display:block;font-family:var(--disp);font-weight:800;font-size:30px;letter-spacing:0;opacity:1;margin-top:2px}
+
+  .bo-card{background:var(--paper);border:1px solid var(--rule);border-radius:3px;padding:20px;margin-top:18px}
+  .bo-h{font-family:var(--disp);font-weight:800;font-size:26px;letter-spacing:.005em;margin:0}
+  .bo-p{font-size:12.5px;color:var(--muted);margin:6px 0 0;max-width:78ch;line-height:1.55}
+  .bo-shead{font-family:var(--mono);font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+
+  .bo-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 4px}
+  .bo-tab{font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;padding:7px 13px;border:1px solid var(--rule);
+    background:transparent;color:var(--ink-2);border-radius:99px;cursor:pointer}
+  .bo-tab:hover{border-color:var(--muted-d);color:var(--ink)}
+  .bo-tab[aria-selected="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+  .bo-tab:focus-visible{outline:2px solid var(--s1);outline-offset:2px}
+
+  .bo-scroll{overflow-x:auto;padding-bottom:6px;margin-top:14px}
+  .bo-hm{display:grid;gap:2px;width:max-content}
+  .bo-hcell{width:17px;height:17px;border-radius:2px;background:var(--q0)}
+  .bo-hcell[data-v]{cursor:pointer}
+  .bo-hcell[data-v]:hover{outline:2px solid var(--ink);outline-offset:1px}
+  .bo-glab{font-family:var(--mono);font-size:10.5px;color:var(--ink-2);width:26px;text-align:right;
+    padding-right:7px;line-height:17px;white-space:nowrap}
+  .bo-mlab{font-family:var(--mono);font-size:9.5px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;
+    height:15px;line-height:15px;white-space:nowrap}
+  .bo-jp{font-size:11px;line-height:15px;text-align:center}
+
+  .bo-legend{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:14px;
+    font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+  .bo-ramp{display:flex;gap:2px}
+  .bo-ramp i{width:17px;height:11px;border-radius:2px;display:block}
+  .bo-key{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--ink-2)}
+  .bo-key i{width:10px;height:10px;border-radius:2px;display:block;flex:none}
+
+  .bo-tip{position:fixed;z-index:40;pointer-events:none;opacity:0;transition:opacity .1s;
+    background:var(--ink);color:var(--page);border-radius:3px;padding:8px 10px;font-family:var(--mono);
+    font-size:11px;line-height:1.5;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.22)}
+  .bo-tip.on{opacity:1}
+  .bo-tip b{font-weight:600}
+
+  .bo-svg{display:block;width:100%;height:auto;overflow:visible}
+  .bo-grid{display:grid;grid-template-columns:1.35fr 1fr;gap:18px;margin-top:18px}
+  @media(max-width:860px){ .bo-grid{grid-template-columns:1fr} }
+
+  .bo-tbl{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11.5px}
+  .bo-tbl th{text-align:right;font-weight:500;color:var(--muted);font-size:9.5px;letter-spacing:.11em;
+    text-transform:uppercase;padding:0 0 8px;border-bottom:1px solid var(--rule);white-space:nowrap}
+  .bo-tbl td{text-align:right;padding:7px 0;border-bottom:1px solid var(--rule-2);white-space:nowrap;
+    font-variant-numeric:tabular-nums}
+  .bo-tbl th:first-child,.bo-tbl td:first-child{text-align:left;font-family:var(--body)}
+  .bo-tbl tr:hover td{background:var(--rule-2)}
+  .bo-wrap{max-height:420px;overflow-y:auto;margin-top:12px}
+  .bo-bar{display:inline-block;height:8px;border-radius:2px;background:var(--s1);vertical-align:middle}
+  .bo-bar.ghost{background:var(--rule);opacity:.9}
+
+  .bo-sliders{margin:14px 0 2px;display:flex;flex-direction:column;gap:9px}
+  .bo-sl{display:grid;grid-template-columns:126px 1fr;align-items:center;gap:10px}
+  .bo-sl b{font-weight:500;font-family:var(--mono);font-size:11px;color:var(--ink-2);white-space:nowrap}
+  .bo-sl input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:20px;background:transparent;cursor:pointer}
+  .bo-sl input[type=range]::-webkit-slider-runnable-track{height:3px;background:var(--rule);border-radius:2px}
+  .bo-sl input[type=range]::-moz-range-track{height:3px;background:var(--rule);border-radius:2px}
+  .bo-sl input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:14px;height:14px;
+    border-radius:50%;background:var(--s1);border:2px solid var(--paper);margin-top:-5.5px;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+  .bo-sl input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--s1);
+    border:2px solid var(--paper);box-shadow:0 1px 3px rgba(0,0,0,.3)}
+  .bo-sl.b input[type=range]::-webkit-slider-thumb{background:var(--s2)}
+  .bo-sl.b input[type=range]::-moz-range-thumb{background:var(--s2)}
+  .bo-sl input[type=range]:focus-visible{outline:2px solid var(--ink);outline-offset:3px;border-radius:4px}
+
+  .bo-foot{margin-top:22px;padding-top:14px;border-top:1px solid var(--rule);
+    font-size:11.5px;color:var(--muted);line-height:1.6}
+  .bo-foot a{color:var(--ink-2)}
+  @media (prefers-reduced-motion:reduce){ .bo-tip{transition:none} }
+</style>
+</head>
+<body>
+<div class="bo">
+
+  <div class="bo-hero">
+    <div class="bo-eyebrow" id="bo-range">—</div>
+    <h1 class="bo-title">Bouldering</h1>
+    <p class="bo-sub">Every boulder my watch has recorded — what I tried, what I sent, and whether the
+       level is actually moving. One row per grade, one column per week.</p>
+    <div class="bo-facts" id="bo-facts"></div>
+  </div>
+
+  <div class="bo-card">
+    <h2 class="bo-h">Week by week</h2>
+    <p class="bo-p">Each column is a calendar week, each row a grade. Empty columns are weeks I didn't climb —
+       they're kept so the spacing is real time, not just a list of sessions.</p>
+    <div class="bo-tabs" role="tablist" aria-label="Heatmap measure">
+      <button class="bo-tab" role="tab" data-m="att" aria-selected="true">Attempts</button>
+      <button class="bo-tab" role="tab" data-m="snd" aria-selected="false">Sends</button>
+      <button class="bo-tab" role="tab" data-m="rate" aria-selected="false">Send rate</button>
+    </div>
+    <div class="bo-scroll"><div class="bo-hm" id="bo-hm"></div></div>
+    <div class="bo-legend">
+      <span id="bo-legtext">Attempts per week</span>
+      <span class="bo-ramp" id="bo-ramp"></span>
+      <span id="bo-legmax">—</span>
+    </div>
+  </div>
+
+  <div class="bo-card">
+    <h2 class="bo-h">Is the level moving?</h2>
+    <p class="bo-p">Every band is a grade, and its thickness is the share of my attempts sitting there in that
+       3-week window. Progress looks like the pale easy grades draining away at the bottom while the dark ones
+       swell — the whole mix marching upward. Below it, the 3-week rolling <em>average</em> grade I actually sent.</p>
+    <div class="bo-legend" id="bo-mixleg" style="margin:14px 0 2px"></div>
+    <svg class="bo-svg" id="bo-prog" viewBox="0 0 960 392" role="img"
+         aria-label="Share of attempts by grade over time, with the median grade sent"></svg>
+    <p class="bo-p" id="bo-mixnote" style="margin-top:10px"></p>
+  </div>
+
+  <div class="bo-grid">
+    <div class="bo-card" style="margin-top:0">
+      <h2 class="bo-h">Compare any two windows</h2>
+      <p class="bo-p">Share of sends at each grade, averaged over a 3-week window. Drag either handle along the
+         timeline to put any two moments side by side.</p>
+      <div class="bo-sliders">
+        <label class="bo-sl"><span class="bo-key"><i style="background:var(--s1)"></i><b id="bo-p1">—</b></span>
+          <input type="range" id="bo-r1" min="0" max="0" step="1" aria-label="First comparison window"></label>
+        <label class="bo-sl"><span class="bo-key"><i style="background:var(--s2)"></i><b id="bo-p2">—</b></span>
+          <input type="range" id="bo-r2" min="0" max="0" step="1" aria-label="Second comparison window"></label>
+      </div>
+      <svg class="bo-svg" id="bo-pyr" viewBox="0 0 520 300" role="img"
+           aria-label="Share of sends by grade for the two selected windows"></svg>
+    </div>
+
+    <div class="bo-card" style="margin-top:0">
+      <h2 class="bo-h">Where the wall wins</h2>
+      <p class="bo-p">Send rate by grade over the <b>last 3 weeks</b>, with the all-time rate behind it for
+         context. The grade where the recent rate crosses 50% is a fair description of the level right now.</p>
+      <div class="bo-wrap" style="max-height:none">
+        <table class="bo-tbl">
+          <thead><tr><th>Grade</th><th>Tried</th><th>Sent</th><th>Rate</th>
+            <th style="width:34%">vs all-time</th></tr></thead>
+          <tbody id="bo-rate"></tbody>
+        </table>
+      </div>
+      <p class="bo-p" id="bo-ratenote" style="margin-top:10px"></p>
+    </div>
+  </div>
+
+  <div class="bo-card">
+    <h2 class="bo-h">Every session</h2>
+    <p class="bo-p">The full log, newest first. Wall time is seconds actually on the boulder; the rest is rest.</p>
+    <div class="bo-wrap">
+      <table class="bo-tbl">
+        <thead><tr>
+          <th>Date</th><th>Tried</th><th>Sent</th><th>Rate</th><th>Hardest</th><th>Median</th>
+          <th>Wall</th><th>Rest</th><th>Avg HR</th>
+        </tr></thead>
+        <tbody id="bo-log"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="bo-foot" id="bo-note"></div>
+</div>
+
+<div class="bo-tip" id="bo-tip" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+  var D=null, MEASURE="att";
+  var RAMP=["--q1","--q2","--q3","--q4","--q5","--q6"];
+  var cssv=function(n){ return getComputedStyle(document.querySelector(".bo")).getPropertyValue(n).trim(); };
+  var MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  function gname(gs){ return gs===0?"VB":"V"+(gs-1); }
+  function fdate(iso){ var d=new Date(iso+"T00:00:00"); return d.getDate()+" "+MON[d.getMonth()]; }
+  function fmin(sec){ var m=Math.round(sec/60); return m>=60?(Math.floor(m/60)+"h "+(m%60)+"m"):(m+"m"); }
+
+  /* ---------- heatmap ---------- */
+  function cellValue(cell){
+    if(!cell) return null;
+    var a=cell[0], s=cell[1];
+    if(MEASURE==="att") return a;
+    if(MEASURE==="snd") return s;
+    return a>0 ? s/a*100 : null;          // rate
+  }
+  function scaleMax(){
+    var mx=0;
+    D.weeks.forEach(function(w){ D.grades.forEach(function(g){
+      var v=cellValue(w.cells[g.gs]); if(v!=null && v>mx) mx=v; }); });
+    return MEASURE==="rate" ? 100 : (mx||1);
+  }
+  function stepFor(v,mx){
+    if(v==null) return null;
+    if(MEASURE!=="rate" && v===0) return null;
+    var t=Math.min(1, v/mx);
+    return Math.min(RAMP.length-1, Math.max(0, Math.ceil(t*RAMP.length)-1));
+  }
+  function drawHeat(){
+    var el=document.getElementById("bo-hm"), W=D.weeks.length, mx=scaleMax();
+    el.style.gridTemplateColumns="26px repeat("+W+",17px)";
+    var rows=[], gs=D.grades.slice().reverse();     // hardest at the top
+    var h="";
+    // month ruler — skip a label if the previous one is too close to read
+    h+='<div></div>';
+    var lastM=-1, lastAt=-99;
+    D.weeks.forEach(function(w,i){
+      var d=new Date(w.w+"T00:00:00"), m=d.getMonth();
+      var show=(m!==lastM) && (i-lastAt>=3);
+      if(m!==lastM) lastM=m;
+      if(show) lastAt=i;
+      h+='<div class="bo-mlab">'+(show?MON[m]:"")+'</div>';
+    });
+    gs.forEach(function(g){
+      h+='<div class="bo-glab">'+g.key+'</div>';
+      D.weeks.forEach(function(w,i){
+        var cell=w.cells[g.gs], v=cellValue(cell), st=stepFor(v,mx);
+        var bg=st==null?"var(--q0)":"var("+RAMP[st]+")";
+        h+='<div class="bo-hcell"'+(cell?' data-v="1" data-w="'+i+'" data-g="'+g.gs+'" tabindex="0"':'')+
+           ' style="background:'+bg+'"></div>';
+      });
+    });
+    // japan marker row
+    h+='<div class="bo-glab" style="font-size:9px;color:var(--muted)"></div>';
+    D.weeks.forEach(function(w){ h+='<div class="bo-jp" title="'+(w.kyu?"kyu grades converted":"")+'">'+(w.kyu?"🇯🇵":"")+'</div>'; });
+    el.innerHTML=h;
+
+    var ramp=document.getElementById("bo-ramp");
+    ramp.innerHTML=RAMP.map(function(v){ return '<i style="background:var('+v+')"></i>'; }).join("");
+    document.getElementById("bo-legtext").textContent=
+      MEASURE==="att"?"Attempts per week":MEASURE==="snd"?"Sends per week":"Send rate";
+    document.getElementById("bo-legmax").textContent=
+      MEASURE==="rate"?"0 → 100%":("1 → "+Math.round(mx));
+  }
+
+  /* ---------- tooltip ---------- */
+  var tip=document.getElementById("bo-tip");
+  function showTip(html,x,y){
+    tip.innerHTML=html; tip.classList.add("on");
+    var r=tip.getBoundingClientRect();
+    var left=Math.min(window.innerWidth-r.width-10, Math.max(10, x-r.width/2));
+    var top=y-r.height-12; if(top<8) top=y+18;
+    tip.style.left=left+"px"; tip.style.top=top+"px";
+  }
+  function hideTip(){ tip.classList.remove("on"); }
+  document.getElementById("bo-hm").addEventListener("pointerover",function(e){
+    var c=e.target.closest(".bo-hcell[data-v]"); if(!c) return;
+    var w=D.weeks[+c.getAttribute("data-w")], g=+c.getAttribute("data-g"), cell=w.cells[g];
+    var a=cell[0], s=cell[1], r=a?Math.round(s/a*100):0;
+    var d=new Date(w.w+"T00:00:00"), end=new Date(d); end.setDate(end.getDate()+6);
+    var b=c.getBoundingClientRect();
+    showTip("<b>"+gname(g)+"</b> · week of "+fdate(w.w)+"<br>"+
+            a+" tried · "+s+" sent · "+r+"%"+(w.kyu?"<br>🇯🇵 includes converted kyu grades":""),
+            b.left+b.width/2, b.top);
+  });
+  document.getElementById("bo-hm").addEventListener("pointerout",hideTip);
+  document.getElementById("bo-hm").addEventListener("focusin",function(e){
+    var c=e.target.closest(".bo-hcell[data-v]"); if(c) c.dispatchEvent(new PointerEvent("pointerover",{bubbles:true}));
+  });
+  document.getElementById("bo-hm").addEventListener("focusout",hideTip);
+
+  /* ---------- rolling windows ----------
+     Everything below a certain size is noise at session level, so the comparison
+     views all work on a WIN-week window rather than on single sessions. */
+  var WIN=3;
+  function windowStats(i0){                    // [i0, i0+WIN) over D.weeks
+    var t={}, att=0, snd=0;
+    for(var i=i0;i<Math.min(D.weeks.length,i0+WIN);i++){
+      var c=D.weeks[i].cells;
+      Object.keys(c).forEach(function(k){
+        t[k]=t[k]||[0,0]; t[k][0]+=c[k][0]; t[k][1]+=c[k][1]; att+=c[k][0]; snd+=c[k][1]; });
+    }
+    return {byGrade:t, att:att, snd:snd};
+  }
+  function winLabel(i0){
+    var a=new Date(D.weeks[i0].w+"T00:00:00");
+    var j=Math.min(D.weeks.length-1,i0+WIN-1);
+    var b=new Date(D.weeks[j].w+"T00:00:00"); b.setDate(b.getDate()+6);
+    return fdate(a.toISOString().slice(0,10))+" – "+fdate(b.toISOString().slice(0,10));
+  }
+  /* mean grade over per-grade counts — a median of whole grades only ever steps
+     between integers, which reads as flat; the mean actually moves */
+  function meanOf(byGrade,idx){
+    var n=0,t=0;
+    Object.keys(byGrade).forEach(function(k){ var c=byGrade[k][idx]; n+=c; t+=c*(+k); });
+    return n? t/n : null;
+  }
+  function gnameF(v){ var x=v-1; return x<0 ? "VB" : "V"+x.toFixed(1); }
+
+  /* ---------- grade mix over time ---------- */
+  var ORD=["#86b6ef","#6da7ec","#5598e7","#3987e5","#2a78d6","#256abf","#184f95","#0d366b"];
+  var ORD_D=["#0d366b","#184f95","#1c5cab","#256abf","#2a78d6","#3987e5","#5598e7","#86b6ef"];
+  function ordColor(i,n){
+    var dark=matchMedia&&matchMedia("(prefers-color-scheme:dark)").matches;
+    var pal=dark?ORD_D:ORD;
+    return pal[Math.round(i/(Math.max(1,n-1))*(pal.length-1))];
+  }
+  function drawMix(){
+    var svg=document.getElementById("bo-prog");
+    var W=960,H=392,PL=40,PR=54;
+    /* two panels sharing one x-axis — the mix is a share (0-100%) and the grade
+       sent is a grade, so they must not share a y-scale */
+    var A_T=12,A_B=240, B_T=274,B_B=356, PB=34;
+    var n=D.weeks.length, gs=D.grades;
+    var pts=[];                                   // one rolling window per week
+    for(var i=0;i<=n-1;i++){
+      var w=windowStats(Math.max(0,Math.min(n-WIN,i-((WIN-1)>>1))));
+      pts.push({i:i, w:w});
+    }
+    var x=function(i){ return PL+(W-PL-PR)*(i/((n-1)||1)); };
+    var y=function(v){ return A_T+(A_B-A_T)*(1-v); };
+    var s="";
+    // stacked bands, easiest at the bottom
+    var prev=pts.map(function(){ return 0; });
+    gs.forEach(function(g,gi){
+      var top=pts.map(function(p,k){
+        var a=p.w.byGrade[g.gs]?p.w.byGrade[g.gs][0]:0;
+        return prev[k] + (p.w.att? a/p.w.att : 0);
+      });
+      var d="M"+pts.map(function(p,k){ return x(p.i).toFixed(1)+","+y(top[k]).toFixed(1); }).join(" L")+
+            " L"+pts.slice().reverse().map(function(p,k){
+              var kk=pts.length-1-k; return x(p.i).toFixed(1)+","+y(prev[kk]).toFixed(1); }).join(" L")+" Z";
+      s+='<path d="'+d+'" fill="'+ordColor(gi,gs.length)+'" stroke="'+cssv("--paper")+'" stroke-width="1" stroke-linejoin="round"/>';
+      prev=top;
+    });
+    // the grade actually being sent, over the same window
+    var med=pts.map(function(p){ return meanOf(p.w.byGrade,1); });
+    /* scale this panel to its own data, not the whole grade ladder — over the
+       full VB..V6 range a 1.5-grade climb is invisible */
+    var mv=med.filter(function(v){ return v!=null; });
+    var lo=Math.min.apply(null,mv)-0.35, hi=Math.max.apply(null,mv)+0.35;
+    var yg=function(g){ return B_T+(B_B-B_T)*(1-(g-lo)/((hi-lo)||1)); };
+    // panel 2 chrome
+    s+='<line x1="'+PL+'" y1="'+B_B+'" x2="'+(W-PR)+'" y2="'+B_B+'" stroke="'+cssv("--rule")+'" vector-effect="non-scaling-stroke"/>';
+    gs.forEach(function(g){
+      if(g.gs<lo||g.gs>hi) return;
+      s+='<line x1="'+PL+'" y1="'+yg(g.gs)+'" x2="'+(W-PR)+'" y2="'+yg(g.gs)+'" stroke="'+cssv("--rule-2")+'" vector-effect="non-scaling-stroke"/>';
+      s+='<text x="'+(PL-8)+'" y="'+(yg(g.gs)+3.5)+'" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="'+cssv("--muted")+'">'+g.key+'</text>';
+    });
+    s+='<text x="'+PL+'" y="'+(B_T-8)+'" font-family="IBM Plex Mono,monospace" font-size="9.5" letter-spacing=".08em" fill="'+cssv("--muted")+'">AVERAGE GRADE SENT · 3-WEEK ROLLING</text>';
+    var seg=[], run=[];
+    med.forEach(function(v,k){ if(v==null){ if(run.length)seg.push(run); run=[]; } else run.push([k,v]); });
+    if(run.length) seg.push(run);
+    seg.forEach(function(r){
+      if(r.length<2) return;
+      var dd="M"+r.map(function(q){ return x(q[0]).toFixed(1)+","+yg(q[1]).toFixed(1); }).join(" L");
+      s+='<path d="'+dd+'" fill="none" stroke="'+cssv("--ink")+'" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+    });
+    // grade axis on the right, positioned at each band's own height
+    var lastY=1e9;
+    gs.slice().reverse().forEach(function(g){
+      var yy=yg(g.gs);
+      if(lastY-yy<0 || Math.abs(lastY-yy)<11) { } // keep all — bands are evenly spaced
+      lastY=yy;
+    });
+    // month ticks
+    var lastX=-99, lastM=-1;
+    D.weeks.forEach(function(w,i){
+      var d=new Date(w.w+"T00:00:00"), m=d.getMonth();
+      if(m===lastM) return; lastM=m;
+      var px=x(i); if(px-lastX<40) return; lastX=px;
+      s+='<text x="'+px+'" y="'+(H-6)+'" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="'+cssv("--muted")+'" letter-spacing="1">'+MON[m].toUpperCase()+'</text>';
+    });
+    // % axis
+    [0,0.25,0.5,0.75,1].forEach(function(v){
+      s+='<text x="'+(PL-8)+'" y="'+(y(v)+3.5)+'" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="'+cssv("--muted")+'">'+Math.round(v*100)+'%</text>';
+    });
+    // end label for the send line
+    var lastMed=null; for(var k=med.length-1;k>=0;k--){ if(med[k]!=null){ lastMed=[k,med[k]]; break; } }
+    if(lastMed){
+      s+='<text x="'+(x(lastMed[0])+10)+'" y="'+(yg(lastMed[1])+3.5)+'" font-family="IBM Plex Mono,monospace" font-size="10.5" font-weight="500" fill="'+cssv("--ink")+'">'+gnameF(lastMed[1])+'</text>';
+    }
+    svg.innerHTML=s;
+
+    document.getElementById("bo-mixleg").innerHTML=
+      gs.slice().reverse().map(function(g,k){
+        return '<span class="bo-key"><i style="background:'+ordColor(gs.length-1-k,gs.length)+'"></i>'+g.key+'</span>';
+      }).join("");
+
+    // spell out the headline in words so the chart isn't the only thing carrying it
+    var first=pts[0].w, last=pts[pts.length-1].w;
+    function shareAtOrAbove(w,gs0){
+      var t=0; Object.keys(w.byGrade).forEach(function(k){ if(+k>=gs0) t+=w.byGrade[k][0]; });
+      return w.att? t/w.att*100 : 0;
+    }
+    var hard=gs[Math.max(0,gs.length-4)].gs;         // V3 and up on this data
+    document.getElementById("bo-mixnote").innerHTML=
+      "At the start, "+Math.round(shareAtOrAbove(first,hard))+"% of my attempts were "+gname(hard)+
+      " or harder. In the last three weeks that's <b>"+Math.round(shareAtOrAbove(last,hard))+"%</b>.";
+  }
+
+  /* ---------- pyramid, two draggable windows ---------- */
+  var W1=0, W2=0;
+  function drawPyr(){
+    var svg=document.getElementById("bo-pyr");
+    var A=windowStats(W1), B=windowStats(W2);
+    document.getElementById("bo-p1").textContent=winLabel(W1);
+    document.getElementById("bo-p2").textContent=winLabel(W2);
+    var W=520,H=300,PL=34,PR=52,PT=8,PB=26, gs=D.grades.slice().reverse();
+    var rowH=(H-PT-PB)/gs.length, mx=0;
+    gs.forEach(function(g){
+      mx=Math.max(mx,(A.byGrade[g.gs]?A.byGrade[g.gs][1]:0)/(A.snd||1),
+                     (B.byGrade[g.gs]?B.byGrade[g.gs][1]:0)/(B.snd||1)); });
+    mx=mx||1;
+    /* the two bars of a grade must read as a pair, so the gap inside a pair is
+       kept much smaller than the gap between grades */
+    var GAP_ROW=11, GAP_PAIR=2, BH=(rowH-GAP_ROW-GAP_PAIR)/2;
+    var s="";
+    gs.forEach(function(g,i){
+      var yy=PT+i*rowH+GAP_ROW/2, bw=(W-PL-PR);
+      s+='<text x="'+(PL-8)+'" y="'+(yy+BH+GAP_PAIR/2+3.5)+'" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="10" fill="'+cssv("--muted")+'">'+g.key+'</text>';
+      [[A,cssv("--s1"),0],[B,cssv("--s2"),1]].forEach(function(p){
+        var cell=p[0].byGrade[g.gs], v=(cell?cell[1]:0)/(p[0].snd||1), w=bw*(v/mx);
+        var yb=yy+p[2]*(BH+GAP_PAIR);
+        if(w>0.5) s+='<rect x="'+PL+'" y="'+yb.toFixed(1)+'" width="'+w.toFixed(1)+'" height="'+BH.toFixed(1)+'" rx="2" fill="'+p[1]+'"/>';
+        if(v>0) s+='<text x="'+(PL+Math.max(w,2)+6)+'" y="'+(yb+BH/2+3.5)+'" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="'+cssv("--muted")+'">'+Math.round(v*100)+'%</text>';
+      });
+    });
+    s+='<line x1="'+PL+'" y1="'+PT+'" x2="'+PL+'" y2="'+(H-PB)+'" stroke="'+cssv("--rule")+'" vector-effect="non-scaling-stroke"/>';
+    s+='<text x="'+PL+'" y="'+(H-8)+'" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="'+cssv("--muted")+'">'+
+       A.snd+' sends vs '+B.snd+' sends in the two windows</text>';
+    svg.innerHTML=s;
+  }
+
+  /* ---------- tables ---------- */
+  function drawTables(){
+    var recent=windowStats(Math.max(0,D.weeks.length-WIN));
+    document.getElementById("bo-rate").innerHTML=D.grades.slice().reverse().map(function(g){
+      var c=recent.byGrade[g.gs], a=c?c[0]:0, sd=c?c[1]:0;
+      var r=a?Math.round(sd/a*100):null;
+      var all=D.byGrade[g.gs], ar=all[0]?Math.round(all[1]/all[0]*100):0;
+      return '<tr><td>'+g.key+'</td><td>'+(a||'—')+'</td><td>'+(a?sd:'—')+'</td>'+
+             '<td>'+(r==null?'—':r+'%')+'</td>'+
+             '<td><span class="bo-bar ghost" style="width:'+ar+'%"></span>'+
+             (r==null?'':'<br><span class="bo-bar" style="width:'+r+'%"></span>')+'</td></tr>';
+    }).join("");
+    document.getElementById("bo-ratenote").textContent=
+      "Last 3 weeks: "+recent.att+" attempts, "+recent.snd+" sends. "+
+      "The faint bar is the all-time rate for that grade.";
+
+    document.getElementById("bo-log").innerHTML=D.sessions.slice().reverse().map(function(s){
+      var r=s.n?Math.round(s.s/s.n*100):0;
+      return '<tr><td>'+fdate(s.d)+' '+String(new Date(s.d+"T00:00:00").getFullYear()).slice(2)+
+             (s.kyu?' 🇯🇵':'')+'</td>'+
+             '<td>'+s.n+'</td><td>'+s.s+'</td><td>'+r+'%</td>'+
+             '<td>'+(s.max!=null?gname(s.max):'—')+'</td>'+
+             '<td>'+(s.med!=null?gname(s.med):'—')+'</td>'+
+             '<td>'+fmin(s.wall)+'</td><td>'+fmin(s.rest)+'</td>'+
+             '<td>'+(s.hr||'—')+'</td></tr>';
+    }).join("");
+  }
+
+  /* ---------- header ---------- */
+  function drawHead(){
+    var S=D.sessions.filter(function(s){ return s.n>0; });
+    var climbs=S.reduce(function(x,s){ return x+s.n; },0);
+    var sends=S.reduce(function(x,s){ return x+s.s; },0);
+    var wall=S.reduce(function(x,s){ return x+s.wall; },0);
+    var best=Math.max.apply(null,S.map(function(s){ return s.max==null?-1:s.max; }));
+    document.getElementById("bo-range").textContent=
+      fdate(D.from)+" "+new Date(D.from).getFullYear()+" — "+fdate(D.to)+" "+new Date(D.to).getFullYear();
+    document.getElementById("bo-facts").innerHTML=
+      '<div class="bo-fact">Sessions<b>'+S.length+'</b></div>'+
+      '<div class="bo-fact">Boulders<b>'+climbs+'</b></div>'+
+      '<div class="bo-fact">Sent<b>'+sends+'</b></div>'+
+      '<div class="bo-fact">Hardest<b>'+gname(best)+'</b></div>'+
+      '<div class="bo-fact">Time on the wall<b>'+Math.round(wall/3600)+'h</b></div>';
+    var kyu=D.sessions.filter(function(s){ return s.kyu; });
+    document.getElementById("bo-note").innerHTML=
+      'Recorded on a Garmin epix Pro, one entry per boulder — grade, sent or not, seconds on the wall and heart rate. '+
+      'Synced '+D.generated+'.'+
+      (kyu.length?(' 🇯🇵 '+kyu.length+' session'+(kyu.length>1?'s':'')+' ('+
+        kyu.map(function(s){return fdate(s.d);}).join(", ")+') '+
+        'was graded in Japanese kyu; those '+kyu.reduce(function(x,s){return x+s.kyu;},0)+
+        ' boulders are converted to the V-scale with the standard table (5級→V2, 4級→V3, 3級→V4). '+
+        'The conversion is approximate and gym-dependent.'):'')+
+      ' Roped climbing is logged separately and is not on this page.';
+  }
+
+  function drawAll(){ drawHeat(); drawMix(); drawPyr(); drawTables(); drawHead(); }
+
+  function initSliders(){
+    var n=D.weeks.length, maxI=Math.max(0,n-WIN);
+    W1=0; W2=maxI;
+    [["bo-r1",1],["bo-r2",2]].forEach(function(t){
+      var el=document.getElementById(t[0]);
+      el.min=0; el.max=maxI; el.value=(t[1]===1?W1:W2);
+      if(t[1]===2) el.parentNode.classList.add("b");
+      el.addEventListener("input",function(){
+        if(t[1]===1) W1=+el.value; else W2=+el.value;
+        drawPyr();
+      });
+    });
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll(".bo-tab"),function(b){
+    b.addEventListener("click",function(){
+      MEASURE=b.getAttribute("data-m");
+      Array.prototype.forEach.call(document.querySelectorAll(".bo-tab"),function(o){
+        o.setAttribute("aria-selected", o===b ? "true":"false"); });
+      drawHeat(); hideTip();
+    });
+  });
+  window.addEventListener("resize",function(){ if(D){ drawMix(); drawPyr(); } });
+  if(window.matchMedia) try{ window.matchMedia("(prefers-color-scheme:dark)").addEventListener("change",function(){ if(D) drawAll(); }); }catch(e){}
+
+  fetch("data.json?t="+Date.now()).then(function(r){ return r.json(); }).then(function(j){
+    D=j; initSliders(); drawAll();
+  }).catch(function(){
+    document.getElementById("bo-note").textContent=
+      "Could not load data.json — if you opened this file directly, serve the folder over http instead.";
+  });
+})();
+</script>
+</body>
+</html>
