@@ -271,9 +271,8 @@
     markLayer(colX, PT, H-PB, function(str){ s+=str; });
     D.weeks.forEach(function(w,i){
       if(!w.sessions) return;
-      var r=3+Math.min(2.5,(w.sessions-1)*1.1);        // bigger dot = more sessions
-      s+='<circle cx="'+colX(i).toFixed(1)+'" cy="'+y(w.dur/3600).toFixed(1)+'" r="'+r.toFixed(1)+
-         '" fill="'+cssv("--s1")+'" stroke="'+cssv("--paper")+'" stroke-width="1.2" opacity=".9"><title>'+
+      s+='<circle cx="'+colX(i).toFixed(1)+'" cy="'+y(w.dur/3600).toFixed(1)+'" r="4"'+
+         ' fill="'+cssv("--s1")+'" stroke="'+cssv("--paper")+'" stroke-width="1.2" opacity=".9"><title>'+
          fdate(w.w)+': '+(w.dur/3600).toFixed(1)+'h over '+w.sessions+' session'+(w.sessions===1?'':'s')+'</title></circle>';
     });
     var lastX=-99, lastM=-1;
@@ -297,7 +296,7 @@
     el.hidden=isTime;
     if(isTime){
       drawTime();
-      document.getElementById("bo-legtext").textContent="Hours in the gym, per week — bigger dot, more sessions";
+      document.getElementById("bo-legtext").textContent="Hours in the gym, per week";
       document.getElementById("bo-ramp").innerHTML="";
       document.getElementById("bo-legmax").textContent="";
       return;
@@ -390,7 +389,7 @@
   }
   var NOTES=[
     {at:"2025-11-24", text:"\uD83C\uDDEF\uD83C\uDDF5"},
-    {from:"2026-06-29", to:"2026-07-20", text:"knee trauma"}
+    {from:"2026-06-22", to:"2026-07-13", text:"knee trauma"}
   ];
   /* Marks above the plot. Context notes sit on the upper row, competitions on
      the lower one, so a comp landing near a note can't collide with it. Both
@@ -422,8 +421,9 @@
       // a small diamond sitting on the top edge marks the comp itself
       emit('<path d="M'+xm.toFixed(1)+','+(top-4)+' l3.5,3.5 l-3.5,3.5 l-3.5,-3.5 Z" fill="'+col+'"/>');
       emit('<text x="'+xm.toFixed(1)+'" y="'+compY+'" text-anchor="middle" font-family="IBM Plex Mono,monospace" '+
-           'font-size="9" fill="'+col+'">'+c.name.split(" ")[0]+' '+(c.pts/1000).toFixed(1)+'k'+
-           '<title>'+c.name+' — '+c.pts.toLocaleString()+' points</title></text>');
+           'font-size="9" font-weight="500" fill="'+col+'">comp · '+c.name.split(" ")[0]+
+           ' · '+c.pts.toLocaleString()+' pts'+
+           '<title>'+c.name+' competition — '+c.pts.toLocaleString()+' points</title></text>');
     });
   }
 
@@ -627,9 +627,9 @@
     document.getElementById("bo-log").innerHTML=D.sessions.slice().reverse().map(function(s){
       var r=s.n?Math.round(s.s/s.n*100):0;
       var cp=compOn(s.d);
-      var badge = cp ? (' <span class="bo-comp">'+
+      var badge = cp ? (' <span class="bo-comp">comp · '+
           (cp.url?('<a href="'+cp.url+'" target="_blank" rel="noopener">'+cp.name+'</a>'):cp.name)+
-          ' · '+cp.pts.toLocaleString()+'</span>') : '';
+          ' · '+cp.pts.toLocaleString()+' pts</span>') : '';
       return '<tr'+(cp?' class="bo-isComp"':'')+'><td>'+fdate(s.d)+' '+String(new Date(s.d+"T00:00:00").getFullYear()).slice(2)+
              (s.kyu?' 🇯🇵':'')+badge+'</td>'+
              '<td>'+s.n+'</td><td>'+s.s+'</td><td>'+r+'%</td>'+
