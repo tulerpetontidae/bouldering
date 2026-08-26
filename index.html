@@ -268,7 +268,7 @@
       s+='<line x1="'+PL+'" y1="'+y(g)+'" x2="'+W+'" y2="'+y(g)+'" stroke="'+cssv("--rule-2")+'" vector-effect="non-scaling-stroke"/>';
       s+='<text x="'+(PL-5)+'" y="'+(y(g)+3)+'" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="9" fill="'+cssv("--muted")+'">'+g+'h</text>';
     }
-    markLayer(colX, PT, H-PB, function(str){ s+=str; });
+    markLayer(colX, PT, H-PB, function(str){ s+=str; }, PL, W);
     D.weeks.forEach(function(w,i){
       if(!w.sessions) return;
       s+='<circle cx="'+colX(i).toFixed(1)+'" cy="'+y(w.dur/3600).toFixed(1)+'" r="4"'+
@@ -403,27 +403,43 @@
     });
     return i0<0 ? null : [i0, Math.max(i0,i1)];
   }
-  function markLayer(xOf, top, bottom, emit){
+  function markLayer(xOf, top, bottom, emit, xLeft, xRight){
     var noteY=top-20, compY=top-6;
+    /* labels are centred on their mark, so near either end they would hang off
+       the plot; clamp them back inside and fall back to shorter text when two
+       would still collide */
+    function place(cx, text, y, size, fill, weight, title){
+      var w=text.length*size*0.62;
+      var x=Math.min(xRight-w/2, Math.max(xLeft+w/2, cx));
+      emit('<text x="'+x.toFixed(1)+'" y="'+y+'" text-anchor="middle" font-family="IBM Plex Mono,monospace" '+
+           'font-size="'+size+'"'+(weight?' font-weight="'+weight+'"':'')+' fill="'+fill+'">'+text+
+           (title?'<title>'+title+'</title>':'')+'</text>');
+      return [x-w/2, x+w/2];
+    }
     NOTES.forEach(function(nt){
       var ix=weekIndex(nt); if(!ix) return;
       var xm=(xOf(ix[0])+xOf(ix[1]))/2;
       emit('<line x1="'+xm.toFixed(1)+'" y1="'+top+'" x2="'+xm.toFixed(1)+'" y2="'+bottom+
            '" stroke="'+cssv("--ink")+'" stroke-width="1" stroke-dasharray="3 3" opacity=".45" vector-effect="non-scaling-stroke"/>');
-      emit('<text x="'+xm.toFixed(1)+'" y="'+noteY+'" text-anchor="middle" font-family="IBM Plex Mono,monospace" '+
-           'font-size="10" fill="'+cssv("--ink")+'" opacity=".8">'+nt.text+'</text>');
+      place(xm, nt.text, noteY, 10, cssv("--ink"), null, null);
     });
-    COMPS.forEach(function(c){
+    var lastRight=-1e9;
+    COMPS.slice().sort(function(a,b){ return a.d<b.d?-1:1; }).forEach(function(c){
       var ix=weekIndex(c); if(!ix) return;
       var xm=xOf(ix[0]), col=cssv("--s2");
+      var full='comp \u00b7 '+c.name.split(" ")[0]+' \u00b7 '+c.pts.toLocaleString()+' pts';
+      var title=c.name+' competition \u2014 '+c.pts.toLocaleString()+' points';
       emit('<line x1="'+xm.toFixed(1)+'" y1="'+top+'" x2="'+xm.toFixed(1)+'" y2="'+bottom+
            '" stroke="'+col+'" stroke-width="1" stroke-dasharray="2 4" opacity=".5" vector-effect="non-scaling-stroke"/>');
-      // a small diamond sitting on the top edge marks the comp itself
       emit('<path d="M'+xm.toFixed(1)+','+(top-4)+' l3.5,3.5 l-3.5,3.5 l-3.5,-3.5 Z" fill="'+col+'"/>');
-      emit('<text x="'+xm.toFixed(1)+'" y="'+compY+'" text-anchor="middle" font-family="IBM Plex Mono,monospace" '+
-           'font-size="9" font-weight="500" fill="'+col+'">comp · '+c.name.split(" ")[0]+
-           ' · '+c.pts.toLocaleString()+' pts'+
-           '<title>'+c.name+' competition — '+c.pts.toLocaleString()+' points</title></text>');
+      // shrink the label rather than let it run into its neighbour
+      var text=full, w=text.length*9*0.62;
+      if(xm-w/2 < lastRight+6){
+        text='comp \u00b7 '+c.pts.toLocaleString();
+        w=text.length*9*0.62;
+        if(xm-w/2 < lastRight+6){ lastRight=xm; return; }   // diamond + hover only
+      }
+      lastRight=place(xm, text, compY, 9, col, 500, title)[1];
     });
   }
 
@@ -514,7 +530,7 @@
     var lo=Math.min.apply(null,mv), hi=Math.max.apply(null,mv);
     if(hi-lo<1){ var mid=(lo+hi)/2; lo=mid-0.6; hi=mid+0.6; } else { lo-=0.35; hi+=0.35; }
     var yg=function(g){ return B_T+(B_B-B_T)*(1-(g-lo)/((hi-lo)||1)); };
-    markLayer(x, A_T, B_B, function(str){ s+=str; });
+    markLayer(x, A_T, B_B, function(str){ s+=str; }, PL, W-PR);
 
     // panel 2 chrome
     s+='<line x1="'+PL+'" y1="'+B_B+'" x2="'+(W-PR)+'" y2="'+B_B+'" stroke="'+cssv("--rule")+'" vector-effect="non-scaling-stroke"/>';
