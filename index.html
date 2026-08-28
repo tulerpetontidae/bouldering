@@ -6,11 +6,24 @@
 <title>Bouldering · progress log</title>
 <meta name="description" content="Every boulder logged since October 2025 — grades tried, grades sent, and how the level has moved.">
 <meta name="theme-color" content="#14130F">
+<script>
+  /* Runs before any paint: "auto" follows the OS, otherwise the stored choice
+     wins. data-theme is what the CSS keys off; data-mode is what the switch
+     shows as selected. */
+  (function(){
+    var m="auto";
+    try{ m=localStorage.getItem("bo-theme")||"auto"; }catch(e){}
+    var r=document.documentElement;
+    r.setAttribute("data-mode",m);
+    r.setAttribute("data-theme", m!=="auto" ? m :
+      (window.matchMedia && matchMedia("(prefers-color-scheme:dark)").matches ? "dark" : "light"));
+  })();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@400;600;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  .bo{
+  :root{
     --page:#F2F0EB; --paper:#FFFFFF; --ink:#14130F; --ink-2:#4A4844; --muted:#8A8781; --muted-d:#A5A29A;
     --rule:#DDDAD2; --rule-2:#ECEAE4;
     /* data marks — validated against this surface, light and dark (see README) */
@@ -20,20 +33,28 @@
     --disp:'Big Shoulders Display','Arial Narrow',sans-serif;
     --body:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
     --mono:'IBM Plex Mono','SF Mono',Menlo,monospace;
+  }
+  /* set by the inline script in <head> before first paint, then by the switch */
+  :root[data-theme="dark"]{
+    --page:#0D0D0C; --paper:#1a1a19; --ink:#FFFFFF; --ink-2:#C3C2B7; --muted:#898781; --muted-d:#75736E;
+    --rule:#2C2C2A; --rule-2:#232322;
+    --s1:#3987e5; --s2:#d95926; --good:#0ca30c;
+    --hero-bg:#1F1E1C; --hero-fg:#FFFFFF; --hero-line:#2C2C2A;
+    --q0:#232322; --q1:#0d366b; --q2:#184f95; --q3:#256abf; --q4:#3987e5; --q5:#6da7ec; --q6:#9ec5f4;
+  }
+  .bo{
     font-family:var(--body); color:var(--ink); line-height:1.45;
     max-width:1120px; margin:0 auto; padding:0 16px 56px; -webkit-font-smoothing:antialiased;
   }
   .bo *{box-sizing:border-box}
   html,body{background:var(--page);margin:0}
-  @media (prefers-color-scheme:dark){
-    html,body{background:#0D0D0C}
-    .bo{ --page:#0D0D0C; --paper:#1a1a19; --ink:#FFFFFF; --ink-2:#C3C2B7; --muted:#898781; --muted-d:#75736E;
-         --rule:#2C2C2A; --rule-2:#232322;
-         --s1:#3987e5; --s2:#d95926; --good:#0ca30c;
-         --hero-bg:#1F1E1C; --hero-fg:#FFFFFF; --hero-line:#2C2C2A;
-         --q0:#232322; --q1:#0d366b; --q2:#184f95; --q3:#256abf; --q4:#3987e5; --q5:#6da7ec; --q6:#9ec5f4; }
-  }
 
+  .bo-themebar{display:flex;justify-content:flex-end;padding-top:14px}
+  .bo-theme{display:inline-flex;gap:2px;border:1px solid var(--rule);border-radius:99px;padding:2px;background:var(--paper)}
+  .bo-theme button{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+    padding:5px 11px;border:0;background:transparent;color:var(--muted);border-radius:99px;cursor:pointer}
+  .bo-theme button:hover{color:var(--ink)}
+  .bo-theme button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
   .bo-hero{background:var(--hero-bg);color:var(--hero-fg);border:1px solid var(--hero-line);border-radius:3px;padding:30px 28px 26px;position:relative;overflow:hidden;margin-top:22px}
   .bo-hero::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;
     background:linear-gradient(90deg,var(--q1),var(--q3),var(--q5),var(--q6))}
@@ -124,6 +145,14 @@
 </head>
 <body>
 <div class="bo">
+
+  <div class="bo-themebar">
+    <div class="bo-theme" role="group" aria-label="Colour theme">
+      <button type="button" data-theme-set="auto" aria-pressed="false">Auto</button>
+      <button type="button" data-theme-set="light" aria-pressed="false">Light</button>
+      <button type="button" data-theme-set="dark" aria-pressed="false">Dark</button>
+    </div>
+  </div>
 
   <div class="bo-hero">
     <div class="bo-eyebrow" id="bo-range">—</div>
@@ -502,8 +531,7 @@
   var ORD=["#86b6ef","#6da7ec","#5598e7","#3987e5","#2a78d6","#256abf","#184f95","#0d366b"];
   var ORD_D=["#0d366b","#184f95","#1c5cab","#256abf","#2a78d6","#3987e5","#5598e7","#86b6ef"];
   function ordColor(i,n){
-    var dark=matchMedia&&matchMedia("(prefers-color-scheme:dark)").matches;
-    var pal=dark?ORD_D:ORD;
+    var pal=document.documentElement.getAttribute("data-theme")==="dark"?ORD_D:ORD;
     return pal[Math.round(i/(Math.max(1,n-1))*(pal.length-1))];
   }
   function drawMix(){
@@ -849,7 +877,28 @@
     });
   });
   window.addEventListener("resize",function(){ if(D){ drawMix(); drawCost(); drawPyr(); } });
-  if(window.matchMedia) try{ window.matchMedia("(prefers-color-scheme:dark)").addEventListener("change",function(){ if(D) drawAll(); }); }catch(e){}
+  var root=document.documentElement;
+  var sysDark=window.matchMedia?matchMedia("(prefers-color-scheme:dark)"):null;
+  function applyTheme(mode){
+    root.setAttribute("data-mode",mode);
+    root.setAttribute("data-theme", mode!=="auto" ? mode : (sysDark&&sysDark.matches?"dark":"light"));
+    document.querySelector('meta[name="theme-color"]')
+      .setAttribute("content", root.getAttribute("data-theme")==="dark" ? "#0D0D0C" : "#14130F");
+    Array.prototype.forEach.call(document.querySelectorAll("[data-theme-set]"),function(b){
+      b.setAttribute("aria-pressed", b.getAttribute("data-theme-set")===mode ? "true":"false"); });
+    if(D) drawAll();
+  }
+  Array.prototype.forEach.call(document.querySelectorAll("[data-theme-set]"),function(b){
+    b.addEventListener("click",function(){
+      var mode=b.getAttribute("data-theme-set");
+      try{ localStorage.setItem("bo-theme",mode); }catch(e){}
+      applyTheme(mode);
+    });
+  });
+  // in auto mode the OS still gets a vote
+  if(sysDark) try{ sysDark.addEventListener("change",function(){
+    if(root.getAttribute("data-mode")==="auto") applyTheme("auto"); }); }catch(e){}
+  applyTheme(root.getAttribute("data-mode")||"auto");
 
   fetch("data.json?t="+Date.now()).then(function(r){ return r.json(); }).then(function(j){
     D=j; initSliders(); drawAll();
