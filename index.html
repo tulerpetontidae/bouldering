@@ -170,6 +170,7 @@
       <button class="bo-tab" role="tab" data-m="snd" aria-selected="false">Sends</button>
       <button class="bo-tab" role="tab" data-m="rate" aria-selected="false">Send rate</button>
       <button class="bo-tab" role="tab" data-m="time" aria-selected="false">Time in the gym</button>
+      <button class="bo-tab" role="tab" data-m="cum" aria-selected="false">Total hours</button>
     </div>
     <div class="bo-scroll"><div class="bo-hm" id="bo-hm"></div><svg class="bo-svg" id="bo-time"
          role="img" hidden aria-label="Hours in the gym per week"></svg></div>
@@ -294,28 +295,63 @@
      doesn't move anything: 26px label gutter, 17px cells, 2px gaps. */
   var CELL=17, GAP=2, LABW=26;
   function colX(i){ return LABW + GAP + i*(CELL+GAP) + CELL/2; }
-  function drawTime(){
+  /* Per-week hours as dots, or the running total as a line. Same frame either
+     way, so the tabs swap without the card resizing. */
+  function drawTime(cum){
     var svg=document.getElementById("bo-time"), n=D.weeks.length;
     var W=LABW + n*CELL + n*GAP;                 // grid width
     var H=15 + 8*CELL + 15 + 9*GAP;              // month row + 8 grades + jp row
     var PT=30, PB=16, PL=LABW+GAP;
     svg.setAttribute("viewBox","0 0 "+W+" "+H);
     svg.setAttribute("width",W); svg.setAttribute("height",H);
-    var mx=0; D.weeks.forEach(function(w){ if(w.dur>mx) mx=w.dur; });
-    var top=Math.ceil(mx/3600) || 1;
+
+    var run=[], acc=0;
+    D.weeks.forEach(function(w){ acc+=(w.dur||0)/3600; run.push(acc); });
+    var total=acc, top, step;
+    if(cum){
+      var opts=[1,2,5,10,20,25,50,100,200,500];
+      step=opts.filter(function(v){ return total/v<=6; })[0]||1000;
+      top=Math.ceil(total/step)*step || step;
+    }else{
+      var mx=0; D.weeks.forEach(function(w){ if(w.dur>mx) mx=w.dur; });
+      top=Math.ceil(mx/3600) || 1; step=2;
+    }
     var y=function(h){ return PT+(H-PT-PB)*(1-h/top); };
     var s="";
-    for(var g=0; g<=top+0.001; g+=2){
+    for(var g=0; g<=top+0.001; g+=step){
       s+='<line x1="'+PL+'" y1="'+y(g)+'" x2="'+W+'" y2="'+y(g)+'" stroke="'+cssv("--rule-2")+'" vector-effect="non-scaling-stroke"/>';
       s+='<text x="'+(PL-5)+'" y="'+(y(g)+3)+'" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="9" fill="'+cssv("--muted")+'">'+g+'h</text>';
     }
     markLayer(colX, PT, H-PB, function(str){ s+=str; }, PL, W);
-    D.weeks.forEach(function(w,i){
-      if(!w.sessions) return;
-      s+='<circle cx="'+colX(i).toFixed(1)+'" cy="'+y(w.dur/3600).toFixed(1)+'" r="4"'+
-         ' fill="'+cssv("--s1")+'" stroke="'+cssv("--paper")+'" stroke-width="1.2" opacity=".9"><title>'+
-         fdate(w.w)+': '+(w.dur/3600).toFixed(1)+'h over '+w.sessions+' session'+(w.sessions===1?'':'s')+'</title></circle>';
-    });
+
+    if(cum){
+      /* the line never falls, so a flat stretch is a stretch of not climbing -
+         which is most of what there is to see here */
+      var pts=run.map(function(h,i){ return colX(i).toFixed(1)+","+y(h).toFixed(1); });
+      s+='<path d="M'+colX(0).toFixed(1)+','+y(0).toFixed(1)+' L'+pts.join(" L")+' L'+
+         colX(n-1).toFixed(1)+','+y(0).toFixed(1)+' Z" fill="'+cssv("--s1")+'" opacity=".10"/>';
+      s+='<path d="M'+pts.join(" L")+'" fill="none" stroke="'+cssv("--s1")+'" stroke-width="2" '+
+         'stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>';
+      s+='<circle cx="'+colX(n-1).toFixed(1)+'" cy="'+y(total).toFixed(1)+'" r="3.5" fill="'+cssv("--s1")+
+         '" stroke="'+cssv("--paper")+'" stroke-width="1.2"/>';
+      s+='<text x="'+(colX(n-1)-6).toFixed(1)+'" y="'+(y(total)-7).toFixed(1)+'" text-anchor="end" '+
+         'font-family="IBM Plex Mono,monospace" font-size="10" font-weight="500" fill="'+cssv("--s1")+'">'+
+         Math.round(total)+'h</text>';
+      // invisible hit targets so every week still has a readout
+      D.weeks.forEach(function(w,i){
+        s+='<circle cx="'+colX(i).toFixed(1)+'" cy="'+y(run[i]).toFixed(1)+'" r="6" fill="transparent"><title>'+
+           fdate(w.w)+': '+run[i].toFixed(1)+'h in total'+
+           (w.dur?(', +'+(w.dur/3600).toFixed(1)+'h that week'):', no climbing that week')+'</title></circle>';
+      });
+    }else{
+      D.weeks.forEach(function(w,i){
+        if(!w.sessions) return;
+        s+='<circle cx="'+colX(i).toFixed(1)+'" cy="'+y(w.dur/3600).toFixed(1)+'" r="4"'+
+           ' fill="'+cssv("--s1")+'" stroke="'+cssv("--paper")+'" stroke-width="1.2" opacity=".9"><title>'+
+           fdate(w.w)+': '+(w.dur/3600).toFixed(1)+'h over '+w.sessions+' session'+(w.sessions===1?'':'s')+'</title></circle>';
+      });
+    }
+
     var lastX=-99, lastM=-1;
     D.weeks.forEach(function(w,i){
       var d=new Date(w.w+"T00:00:00"), m=d.getMonth();
@@ -329,15 +365,16 @@
 
   function drawHeat(){
     var el=document.getElementById("bo-hm"), W=D.weeks.length, mx=scaleMax();
-    var isTime=(MEASURE==="time");
+    var isTime=(MEASURE==="time"||MEASURE==="cum");
     /* SVGElement has no `hidden` IDL property, so assigning it silently does
        nothing to the attribute — toggle the attribute itself */
     var tsvg=document.getElementById("bo-time");
     if(isTime) tsvg.removeAttribute("hidden"); else tsvg.setAttribute("hidden","");
     el.hidden=isTime;
     if(isTime){
-      drawTime();
-      document.getElementById("bo-legtext").textContent="Hours in the gym, per week";
+      drawTime(MEASURE==="cum");
+      document.getElementById("bo-legtext").textContent=
+        MEASURE==="cum" ? "Hours in the gym, running total" : "Hours in the gym, per week";
       document.getElementById("bo-ramp").innerHTML="";
       document.getElementById("bo-legmax").textContent="";
       return;
