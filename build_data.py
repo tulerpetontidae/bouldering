@@ -75,6 +75,7 @@ for s in sessions:
         "top": max(allg) if allg else None,              # hardest tried
         "med": allg[len(allg) // 2] if allg else None,   # median tried
         "wall": wall, "rest": rest,
+        "dur": int(s["dur"] or 0),           # door to door, for the cost-per-grade fit
         "hr": s["hr"], "hrx": s["hrx"], "cal": s["cal"],
         "load": round(s["load"], 1) if s["load"] else None,
         "byGrade": {str(k): per[k] for k in sorted(per)},
