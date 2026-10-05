@@ -135,6 +135,8 @@
     border:2px solid var(--paper);box-shadow:0 1px 3px rgba(0,0,0,.3)}
   .bo-sl.b input[type=range]::-webkit-slider-thumb{background:var(--s2)}
   .bo-sl.b input[type=range]::-moz-range-thumb{background:var(--s2)}
+  .bo-dream{grid-template-columns:minmax(220px,auto) 1fr}
+  .bo-dream .bo-key{color:var(--muted);font-family:var(--mono);font-size:11px}
   .bo-sl input[type=range]:focus-visible{outline:2px solid var(--ink);outline-offset:3px;border-radius:4px}
 
   .bo-foot{margin-top:22px;padding-top:14px;border-top:1px solid var(--rule);
@@ -202,7 +204,12 @@
        gym by then — whole sessions, door to door, not just the minutes actually on a boulder.
        The axis is logarithmic because the spacing is: each new grade has cost a fixed
        <i>multiple</i> of all the time that came before it, not a fixed number of hours. The dashed half is the
-       same line carried onward, which is exactly as trustworthy as that sounds.</p>
+       same line carried onward, which is exactly as trustworthy as that sounds. Drag it as far as you dare.</p>
+    <div class="bo-sliders">
+      <label class="bo-sl b bo-dream"><span class="bo-key"><i style="background:var(--s2)"></i>Dream as far as
+        <b id="bo-dreamv">V10</b></span>
+        <input type="range" id="bo-dream" min="8" max="18" step="1" value="11" aria-label="Hardest grade to project"></label>
+    </div>
     <svg class="bo-svg" id="bo-cost" viewBox="0 0 960 360" role="img"
          aria-label="Cumulative hours in the gym at each new hardest grade, with an extrapolation"></svg>
     <p class="bo-p" id="bo-costnote" style="margin-top:12px"></p>
@@ -225,8 +232,12 @@
 
     <div class="bo-card" style="margin-top:0">
       <h2 class="bo-h">Where the wall wins</h2>
-      <p class="bo-p">Send rate by grade over the <b>last 3 weeks</b>. The grade where it crosses 50% is a fair
-         description of the level right now.</p>
+      <p class="bo-p">Tried versus sent at each grade. The grade where the rate crosses 50% is a fair
+         description of the level — the last three weeks say where it is now, all time says where it has been.</p>
+      <div class="bo-tabs" role="tablist" aria-label="Send-rate window" style="margin:12px 0 4px">
+        <button class="bo-tab" role="tab" data-rw="recent" aria-selected="true">Last 3 weeks</button>
+        <button class="bo-tab" role="tab" data-rw="all" aria-selected="false">All time</button>
+      </div>
       <div class="bo-wrap" style="max-height:none">
         <table class="bo-tbl">
           <thead><tr><th>Grade</th><th>Tried</th><th>Sent</th><th>Rate</th>
@@ -732,6 +743,17 @@
     return { a:a, b:b, r2: sst? 1-ssr/sst : 1, at:function(g){ return Math.exp(a+b*g); } };
   }
   function monthYear(dt){ return MON[dt.getMonth()]+" "+dt.getFullYear(); }
+  /* far-future dates read better as a year, and absurd ones as an era */
+  function whenLabel(dt){
+    var y=dt.getFullYear();
+    if(y<=2100) return monthYear(dt);
+    if(y<10000) return "~"+y;
+    return "AD "+y.toLocaleString();
+  }
+  function hoursLabel(h){ return h.toLocaleString()+"h"; }
+  var DREAM=11;                       // V10 by default; the slider reaches V17
+  var BOD=18;                         // V17 - Burden of Dreams, Lappnor, Nalle Hukkataival 2016
+  function dreamName(g){ return gname(g)+(g===BOD?" \u00b7 Burden of Dreams":""); }
 
   function drawCost(){
     var svg=document.getElementById("bo-cost"), note=document.getElementById("bo-costnote");
@@ -746,7 +768,11 @@
     var dateFor=function(h){ return new Date(t1.getTime()+Math.max(0,(h-totalH)/pace)*6048e5); };
 
     var gTop=Math.max.apply(null,L.map(function(p){ return p.gs; }));
-    var AHEAD=4, gMax=gTop+AHEAD;                    // four grades past the current best
+    var dr=document.getElementById("bo-dream");
+    dr.min=gTop+1; dr.max=Math.max(BOD,gTop+1);
+    DREAM=Math.min(Math.max(DREAM,gTop+1),+dr.max); dr.value=DREAM;
+    document.getElementById("bo-dreamv").textContent=dreamName(DREAM);
+    var gMax=DREAM;
     var proj=[]; for(var g=gTop+1; g<=gMax; g++) proj.push({gs:g, h:fit.at(g)});
 
     var W=960,H=360,PL=52,PR=26,PT=34,PB=48;
@@ -765,12 +791,14 @@
          'font-size="10.5" fill="'+cssv(real?"--ink-2":"--muted-d")+'">'+gname(g)+'</text>';
     }
     // decade-ish hour ticks
-    [1,3,10,30,100,300,1000,3000,10000].forEach(function(h){
+    var span=Math.log10(hHi/hLo), ticks=[];
+    for(var dec=1; dec<=hHi; dec*=10){ ticks.push(dec); if(span<=4.5) ticks.push(dec*3); }
+    ticks.forEach(function(h){
       if(h<hLo||h>hHi) return;
       s+='<line x1="'+lx(h).toFixed(1)+'" y1="'+PT+'" x2="'+lx(h).toFixed(1)+'" y2="'+(H-PB)+
          '" stroke="'+cssv("--rule-2")+'" vector-effect="non-scaling-stroke"/>';
       s+='<text x="'+lx(h).toFixed(1)+'" y="'+(H-PB+17)+'" text-anchor="middle" font-family="IBM Plex Mono,monospace" '+
-         'font-size="9.5" fill="'+cssv("--muted")+'">'+h.toLocaleString()+'h</text>';
+         'font-size="9.5" fill="'+cssv("--muted")+'">'+hoursLabel(h)+'</text>';
     });
     s+='<text x="'+((PL+W-PR)/2)+'" y="'+(H-8)+'" text-anchor="middle" font-family="IBM Plex Mono,monospace" '+
        'font-size="9.5" letter-spacing="1" fill="'+cssv("--muted")+'">HOURS IN THE GYM, CUMULATIVE</text>';
@@ -803,12 +831,14 @@
 
     // the projection
     proj.forEach(function(p){
-      var dt=dateFor(p.h);
-      s+='<circle cx="'+lx(p.h).toFixed(1)+'" cy="'+y(p.gs).toFixed(1)+'" r="4" fill="'+cssv("--paper")+
-         '" stroke="'+c2+'" stroke-width="2"><title>'+gname(p.gs)+': '+Math.round(p.h)+
-         'h in the gym, i.e. '+monthYear(dt)+' at '+pace.toFixed(1)+'h a week</title></circle>';
-      s+='<text x="'+(lx(p.h)+9).toFixed(1)+'" y="'+(y(p.gs)+3.5).toFixed(1)+'" font-family="IBM Plex Mono,monospace" '+
-         'font-size="10" fill="'+c2+'">'+monthYear(dt)+'</text>';
+      var dt=dateFor(p.h), px=lx(p.h), txt=whenLabel(dt)+(p.gs===BOD?" \u00b7 Burden of Dreams":"");
+      var left = px+9+txt.length*6.2 > W-PR;
+      s+='<circle cx="'+px.toFixed(1)+'" cy="'+y(p.gs).toFixed(1)+'" r="'+(p.gs===BOD?5:4)+'" fill="'+cssv("--paper")+
+         '" stroke="'+c2+'" stroke-width="2"><title>'+gname(p.gs)+': '+Math.round(p.h).toLocaleString()+
+         'h in the gym, i.e. '+whenLabel(dt)+' at '+pace.toFixed(1)+'h a week</title></circle>';
+      s+='<text x="'+(left?px-9:px+9).toFixed(1)+'" y="'+(y(p.gs)+3.5).toFixed(1)+'"'+(left?' text-anchor="end"':'')+
+         ' font-family="IBM Plex Mono,monospace" font-size="10"'+(p.gs===BOD?' font-weight="500"':'')+
+         ' fill="'+c2+'">'+txt+'</text>';
     });
 
     svg.innerHTML=s;
@@ -818,21 +848,42 @@
       gname(earned[0].gs)+'\u2013'+gname(gTop)+' (R\u00b2 '+fit.r2.toFixed(2)+'): each one has cost about <b>'+
       mult.toFixed(1)+'\u00d7</b> the total gym time of the grade below it. Carried forward at my current <b>'+
       pace.toFixed(1)+' h a week</b>, that puts '+gname(gTop+1)+' around '+monthYear(dateFor(proj[0].h))+
-      ' and '+gname(gMax)+' somewhere in '+dateFor(proj[proj.length-1].h).getFullYear()+
+      (gMax>gTop+1 ? (' and '+gname(gMax)+' '+farWhen(gMax)) : '')+
       '. Two things this ignores: I get older, and nobody\u2019s progress is a straight line on a log axis forever.';
+    function farWhen(g){
+      var hh=fit.at(g), y=dateFor(hh).getFullYear(), yrs=y-t1.getFullYear();
+      var base=(g===BOD?'\u2014 the grade of Burden of Dreams \u2014 ':'')+
+               'after '+Math.round(hh).toLocaleString()+' hours, ';
+      if(y<=2100) return base+'somewhere in '+y;
+      return base+'around '+whenLabel(dateFor(hh))+', roughly '+Math.round(yrs/80).toLocaleString()+
+             ' lifetime'+(Math.round(yrs/80)===1?'':'s')+' from now';
+    }
   }
 
-  function drawTables(){
-    var recent=windowStats(Math.max(0,D.weeks.length-WIN));
+  /* send-rate table: the last WIN weeks, or everything since the first session */
+  var RW="recent";
+  function drawRate(){
+    var st;
+    if(RW==="all"){
+      var att=0, snd=0;
+      for(var k in D.byGrade){ att+=D.byGrade[k][0]; snd+=D.byGrade[k][1]; }
+      st={byGrade:D.byGrade, att:att, snd:snd};
+    }else st=windowStats(Math.max(0,D.weeks.length-WIN));
     document.getElementById("bo-rate").innerHTML=D.grades.slice().reverse().map(function(g){
-      var c=recent.byGrade[g.gs], a=c?c[0]:0, sd=c?c[1]:0;
+      var c=st.byGrade[g.gs], a=c?c[0]:0, sd=c?c[1]:0;
       var r=a?Math.round(sd/a*100):null;
       return '<tr><td>'+g.key+'</td><td>'+(a||'—')+'</td><td>'+(a?sd:'—')+'</td>'+
              '<td>'+(r==null?'—':r+'%')+'</td>'+
              '<td>'+(r==null?'':'<span class="bo-bar" style="width:'+r+'%"></span>')+'</td></tr>';
     }).join("");
-    document.getElementById("bo-ratenote").textContent=
-      "Last 3 weeks: "+recent.att+" attempts, "+recent.snd+" sends.";
+    document.getElementById("bo-ratenote").textContent = RW==="all"
+      ? ("All time, since "+fdate(D.from)+" "+new Date(D.from+"T00:00:00").getFullYear()+": "+
+         st.att.toLocaleString()+" attempts, "+st.snd.toLocaleString()+" sends.")
+      : ("Last 3 weeks: "+st.att+" attempts, "+st.snd+" sends.");
+  }
+
+  function drawTables(){
+    drawRate();
 
     document.getElementById("bo-log").innerHTML=D.sessions.slice().reverse().map(function(s){
       var r=s.n?Math.round(s.s/s.n*100):0;
@@ -897,6 +948,17 @@
     });
   }
 
+  document.getElementById("bo-dream").addEventListener("input",function(e){
+    DREAM=+e.target.value; drawCost();
+  });
+  Array.prototype.forEach.call(document.querySelectorAll(".bo-tab[data-rw]"),function(b){
+    b.addEventListener("click",function(){
+      RW=b.getAttribute("data-rw");
+      Array.prototype.forEach.call(document.querySelectorAll(".bo-tab[data-rw]"),function(o){
+        o.setAttribute("aria-selected", o===b ? "true":"false"); });
+      drawRate();
+    });
+  });
   Array.prototype.forEach.call(document.querySelectorAll(".bo-tab[data-lm]"),function(b){
     b.addEventListener("click",function(){
       LM=b.getAttribute("data-lm");
