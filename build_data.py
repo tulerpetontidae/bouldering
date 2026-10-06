@@ -24,6 +24,18 @@ KYU_TO_GS = {
     "_1_KYUU": 7,   # 1 kyu -> V6
 }
 
+# Sessions the watch may have filed as bouldering that were really something
+# else. Matched on local start time, give or take a few minutes, because
+# Garmin and Strava can disagree by a minute about when an activity began.
+EXCLUDE = [
+    ("2026-10-05 20:08", "top rope, not bouldering"),
+]
+EXCLUDE_SLACK = dt.timedelta(minutes=5)
+
+def excluded(s):
+    start = dt.datetime.fromisoformat(s["date"][:16])
+    return any(abs(start - dt.datetime.fromisoformat(t)) <= EXCLUDE_SLACK for t, _ in EXCLUDE)
+
 def as_v(c):
     """Return (gradeSortOrder, converted?) or (None, False) if not mappable."""
     if c["sc"] == "VERMIN":
@@ -39,7 +51,7 @@ def monday(d):
     return d - dt.timedelta(days=d.weekday())
 
 raw = json.load(open(RAW))
-sessions = [s for s in raw["sessions"] if s["type"] == "bouldering"]
+sessions = [s for s in raw["sessions"] if s["type"] == "bouldering" and not excluded(s)]
 sessions.sort(key=lambda s: s["date"])
 
 out_sessions, weeks = [], collections.OrderedDict()
