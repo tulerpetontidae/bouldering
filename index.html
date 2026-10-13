@@ -1034,8 +1034,11 @@
   var G=["#184f95","#256abf","#2a78d6","#3987e5","#6da7ec","#9ec5f4","#cde2fb"];
   function gcol(gs){ return G[Math.max(1,Math.min(7,gs))-1]; }
   function rnd(seed){ var x=Math.sin(seed*12.9898)*43758.5453; return x-Math.floor(x); }
-  function sideFade(lg){ [[0,0],[.16,.06],[.4,1],[.6,1],[.84,.06],[1,0]].forEach(function(st){
-    el("stop",{offset:st[0],"stop-color":"#fff","stop-opacity":st[1]},lg); }); }
+  // long, eased fade at both ends (smootherstep over the outer 45%), so the rock has no visible edge
+  function sideFade(lg){ var E=.45, N=14, st=[];
+    for(var i=0;i<=N;i++){ var t=i/N, v=t*t*t*(t*(t*6-15)+10); st.push([t*E,v]); }
+    st.concat(st.slice().reverse().map(function(p){ return [1-p[0],p[1]]; })).forEach(function(p){
+      el("stop",{offset:p[0].toFixed(4),"stop-color":"#fff","stop-opacity":p[1].toFixed(4)},lg); }); }
 
   var ST2=0;
   window.boStrata=function(D){
