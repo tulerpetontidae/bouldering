@@ -62,6 +62,17 @@
   .bo-title{font-family:var(--disp);font-weight:800;font-size:clamp(44px,9vw,76px);line-height:.9;margin:10px 0 0;letter-spacing:-.01em}
   .bo-sub{font-size:13.5px;opacity:.8;margin-top:10px;max-width:60ch}
   .bo-facts{display:flex;flex-wrap:wrap;gap:26px;margin-top:22px}
+  /* text on the left, the rock face on the right; on phones the art sits between the tagline and the numbers */
+  .bo-hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,470px);column-gap:24px;align-content:start}
+  .bo-hero>*{grid-column:1}
+  .bo-art{grid-column:2;grid-row:1 / span 4;margin:0;align-self:center}
+  .bo-art svg{display:block;width:100%;height:auto}
+  .bo-art figcaption{font-size:11px;line-height:1.45;opacity:.55;margin-top:6px;max-width:52ch;margin-left:auto;text-align:right}
+  @media(max-width:760px){
+    .bo-hero{grid-template-columns:minmax(0,1fr)}
+    .bo-art{grid-column:1;grid-row:auto;margin:16px -8px 0}
+    .bo-art figcaption{text-align:left;margin:4px 8px 0}
+  }
   .bo-fact{font-family:var(--mono);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;opacity:.62}
   .bo-fact b{display:block;font-family:var(--disp);font-weight:800;font-size:30px;letter-spacing:0;opacity:1;margin-top:2px}
 
@@ -159,7 +170,9 @@
   <div class="bo-hero">
     <div class="bo-eyebrow" id="bo-range">—</div>
     <h1 class="bo-title">Bouldering</h1>
-    <p class="bo-sub">I have too much fun on the wall! Here is every boulder my watch has recorded.</p>
+    <p class="bo-sub">I’ve logged nearly every session since I started bouldering. Being able to visualise my progress is the payoff.</p>
+    <figure class="bo-art"><div id="bo-art"></div>
+      <figcaption>Each week settles as a layer: thickness is hours in the gym, colour the hardest grade sent. Faults slip at my longest breaks.</figcaption></figure>
     <div class="bo-facts" id="bo-facts"></div>
   </div>
 
@@ -1000,11 +1013,163 @@
   applyTheme(root.getAttribute("data-mode")||"auto");
 
   fetch("data.json?t="+Date.now()).then(function(r){ return r.json(); }).then(function(j){
-    D=j; initSliders(); drawAll();
+    D=j; initSliders(); drawAll(); if(window.boStrata) boStrata(j);
   }).catch(function(){
     document.getElementById("bo-note").textContent=
       "Could not load data.json — if you opened this file directly, serve the folder over http instead.";
   });
+})();
+</script>
+<script>
+/* header art: each week settles as a layer of rock. Thickness is hours in the gym, colour the hardest
+   grade sent; faults slip at the longest breaks and hairline cracks open as the face ages. */
+(function(){
+  var MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  var REDUCE=window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var NS="http://www.w3.org/2000/svg";
+  function el(tag,attrs,parent){ var e=document.createElementNS(NS,tag); for(var k in attrs) e.setAttribute(k,attrs[k]); if(parent) parent.appendChild(e); return e; }
+  function svg(host,W,H){ return el("svg",{viewBox:"0 0 "+W+" "+H,preserveAspectRatio:"xMidYMid meet","aria-hidden":"true"},host); }
+  function dd(iso){ return new Date(iso+"T00:00:00"); }
+  // the header is dark in both themes, so harder grades read brighter: V0 deep blue up to V6 nearly white
+  var G=["#184f95","#256abf","#2a78d6","#3987e5","#6da7ec","#9ec5f4","#cde2fb"];
+  function gcol(gs){ return G[Math.max(1,Math.min(7,gs))-1]; }
+  function rnd(seed){ var x=Math.sin(seed*12.9898)*43758.5453; return x-Math.floor(x); }
+  function sideFade(lg){ [[0,0],[.16,.06],[.4,1],[.6,1],[.84,.06],[1,0]].forEach(function(st){
+    el("stop",{offset:st[0],"stop-color":"#fff","stop-opacity":st[1]},lg); }); }
+
+  var ST2=0;
+  window.boStrata=function(D){
+    var gen=++ST2, host=document.getElementById("bo-art"); host.innerHTML="";
+    var W=470,H=232, s=svg(host,W,H), weeks=D.weeks, n=weeks.length, NX=160, x0=-6, x1=W+6, dx=(x1-x0)/NX;
+    var hrs=weeks.map(function(w){ return (w.dur||0)/3600; }), SEAM=1.4;
+    var tot=hrs.reduce(function(a,h){ return a+(h>0?h:0); },0), seams=hrs.filter(function(h){return !h;}).length;
+    var k=(H-52-seams*SEAM)/tot, DIP=.045, i, b;
+    function top(w){ var g=-1; for(var c in w.cells) if(w.cells[c][1] && +c>g) g=+c; return g; }
+    function colOf(g,h){ if(!h) return "#1c1b18"; if(g<1) return "#3b3934"; return gcol(g); }
+    function wob(i,a,b){ return Math.sin(i*a+b)+.5*Math.sin(i*a*2.7+b*3.1)+.25*Math.sin(i*a*6.1+b*1.7); }
+    function ss(a,b,v){ var t=Math.max(0,Math.min(1,(v-a)/(b-a))); return t*t*(3-2*t); }
+    var X=[]; for(i=0;i<=NX;i++) X.push(x0+dx*i);
+
+    // faults strike at the breaks: the longest first, then others at least 8 weeks apart
+    var gaps=[]; for(i=0;i<n;i++) if(!hrs[i] && (i===0||hrs[i-1])){ var L=0; while(i+L<n && !hrs[i+L]) L++; gaps.push({T:i,len:L}); }
+    gaps.sort(function(a,b){ return b.len-a.len || b.T-a.T; });
+    var pick=[]; gaps.forEach(function(g){ if(pick.length<3 && pick.every(function(p){ return Math.abs(p.T-g.T)>=8; })) pick.push(g); });
+    pick.sort(function(a,b){ return a.T-b.T; });
+    var GEO=[{fx:.6,lean:.22,side:1,drop:5,ph:1.3},{fx:.43,lean:-.28,side:-1,drop:4,ph:4.1},{fx:.76,lean:.12,side:1,drop:3,ph:2.2}];
+    var FAULTS=pick.map(function(g,j){ var f=GEO[j]; return {T:g.T,fx:f.fx*W,lean:f.lean,side:f.side,drop:f.drop+2*g.len,ph:f.ph}; });
+    function xf(f,y){ return f.fx+(H-y)*f.lean+2.2*Math.sin(y*.29+f.ph)+1.1*Math.sin(y*.77+f.ph*2)+.5*Math.sin(y*1.9+f.ph*3); }
+    function slip(f,x,y){ var u=(x-xf(f,y))*f.side; return f.drop*(.8*ss(-1.6,1.6,u)+.2*ss(-12,12,u)); }
+
+    // deposit week by week; a fault displaces everything already laid down, later beds drape over and heal the step
+    var B=[X.map(function(x,i){ return H-4-(x-W/2)*DIP+wob(i*94/NX,.2,1)*.8; })], OFFS=FAULTS.map(function(){ return []; }), layers=[];
+    weeks.forEach(function(w,wi){
+      FAULTS.forEach(function(f,fi){ if(f.T!==wi) return;
+        for(var b=0;b<=wi;b++){ var o=B[b].map(function(y,i){ return slip(f,X[i],y); }); OFFS[fi][b]=o; for(var i=0;i<=NX;i++) B[b][i]+=o[i]; } });
+      var th=hrs[wi]>0 ? hrs[wi]*k : SEAM, fq=.07+rnd(wi+9)*.09, ph=rnd(wi+3)*6.28, amp=hrs[wi]>0?.42:.3, prev=B[wi];
+      var next=prev.map(function(y,i){ var lo=Math.max(0,i-6), hi=Math.min(NX,i+6), m=0; for(var j=lo;j<=hi;j++) m+=prev[j]; m/=hi-lo+1;
+        var t=th*(1+amp*wob(i*94/NX,fq,ph)/1.75);                  // pinch and swell
+        return Math.min(prev[i]-Math.max(th*.22,SEAM*.3), prev[i]-Math.max(th*.22,t)+.28*(m-prev[i])); });   // lows fill faster
+      B.push(next);
+      layers.push({wi:wi,w:w,th:th,col:colOf(top(w),hrs[wi]),op:.84+rnd(wi+21)*.16});
+    });
+    var last=B[n];                                                   // weather the top surface: shallow notches and gullies
+    for(i=0;i<=NX;i++){ var xi=i*94/NX; last[i]+=Math.abs(wob(xi,.31,4.2))*2.2+Math.max(0,Math.sin(xi*.09+1.3)-.8)*14; }
+
+    var act=FAULTS.map(function(){ return 0; });
+    function dispY(b,i){ var y=B[b][i]; for(var f=0;f<FAULTS.length;f++) if(act[f]<1 && OFFS[f][b]) y-=(1-act[f])*OFFS[f][b][i]; return y; }
+    function dispRow(b){ var r=[]; for(var i=0;i<=NX;i++) r.push(dispY(b,i)); return r; }
+    function dispX(b,x){ var t=(x-x0)/dx, i=Math.max(0,Math.min(NX-1,Math.floor(t))), f=t-i; return dispY(b,i)*(1-f)+dispY(b,i+1)*f; }
+
+    // joints: hairline cracks that open as the rock ages, each confined to a few beds
+    var CR=[]; for(var c=0;c<40;c++){
+      var birth=Math.min(n-1,Math.floor(n*(.22+.78*Math.sqrt(rnd(c*5+101))))), top2=birth-4; if(top2<1) continue;
+      var a1=Math.floor(rnd(c*5+102)*top2), a2=Math.min(top2,a1+1+Math.floor(rnd(c*5+103)*5));
+      var x=W*(.25+.58*rnd(c*5+104)), lean=(rnd(c*5+105)-.5)*.6, v=[];
+      for(var Lb=a1;Lb<=a2;Lb++) for(var q=0;q<3;q++){ x+=(rnd(c*31+Lb*3+q)-.5)*2.2+lean; v.push([x,Lb,q/3]); }
+      v.push([x+(rnd(c+7)-.5)*1.5,a2+1,0]);
+      var subs=[v];
+      if(rnd(c*5+106)<.35 && v.length>4){ var j0=1+Math.floor(rnd(c*5+107)*(v.length-3)), bx=v[j0][0], dir=rnd(c+9)<.5?-1:1, br=[v[j0]];
+        for(q=1;q<=3 && j0+q<v.length;q++){ bx+=dir*(1.6+rnd(c*7+q)*1.6); br.push([bx,v[j0+q][1],v[j0+q][2]]); } subs.push(br); }
+      CR.push({birth:birth,subs:subs,w:.45+rnd(c*5+108)*.45,op:.55+rnd(c*5+109)*.35});
+    }
+    function cy(p){ var y0=dispX(p[1],p[0]); return p[2]&&p[1]<n ? y0+(dispX(p[1]+1,p[0])-y0)*p[2] : y0; }
+    function crackD(C){ return C.subs.map(function(v){ return v.map(function(p,j){ return (j?"L":"M")+p[0].toFixed(1)+","+cy(p).toFixed(1); }).join(" "); }).join(" "); }
+
+    var defs=el("defs",{},s);
+    var fl=el("filter",{id:"grain2",x:0,y:0,width:"100%",height:"100%"},defs);
+    el("feTurbulence",{type:"fractalNoise",baseFrequency:"0.55 0.05",numOctaves:3,seed:7,result:"n"},fl);
+    el("feColorMatrix",{in:"n",type:"saturate",values:0,result:"g"},fl);
+    var ct=el("feComponentTransfer",{in:"g",result:"g2"},fl);
+    ["R","G","B"].forEach(function(c){ el("feFunc"+c,{type:"linear",slope:.75,intercept:.5},ct); });
+    el("feBlend",{in:"SourceGraphic",in2:"g2",mode:"multiply",result:"m"},fl);
+    el("feComposite",{in:"m",in2:"SourceGraphic",operator:"in"},fl);
+    var lg=el("linearGradient",{id:"st2F",x1:0,x2:1,y1:0,y2:0},defs); sideFade(lg);
+    var vg=el("linearGradient",{id:"st2V",x1:0,x2:0,y1:0,y2:1},defs);
+    [[0,1],[.9,1],[1,.2]].forEach(function(st){ el("stop",{offset:st[0],"stop-color":"#fff","stop-opacity":st[1]},vg); });
+    var mH=el("mask",{id:"st2MH"},defs); el("rect",{x:0,y:0,width:W,height:H,fill:"url(#st2F)"},mH);
+    var mV=el("mask",{id:"st2MV"},defs); el("rect",{x:0,y:0,width:W,height:H,fill:"url(#st2V)"},mV);
+    var sh=el("linearGradient",{id:"st2S",x1:0,x2:0,y1:0,y2:1},defs);
+    [[0,0],[.45,0],[1,.22]].forEach(function(st){ el("stop",{offset:st[0],"stop-color":"#000","stop-opacity":st[1]},sh); });
+    var outer=el("g",{mask:"url(#st2MV)"},s), g=el("g",{mask:"url(#st2MH)"},outer), face=el("g",{},g);
+    var rock=el("g",{filter:"url(#grain2)"},face), crk=el("g",{},face), flt=el("g",{},face);
+    el("rect",{x:0,y:0,width:W,height:H,fill:"url(#st2S)"},g);    // the lower face sits in shade
+
+    function line(ys){ var d=""; for(var i=0;i<=NX;i++) d+=(i?" L":"M")+X[i].toFixed(1)+","+ys[i].toFixed(1); return d; }
+    function area(pr,up){ var d=line(up); for(var i=NX;i>=0;i--) d+=" L"+X[i].toFixed(1)+","+pr[i].toFixed(1); return d+"Z"; }
+    var parts=layers.map(function(L){
+      var lg2=el("g",{},rock), p={L:L,g:lg2,e:0,fill:el("path",{fill:L.col,"fill-opacity":L.op},lg2),lam:[],
+        hi:el("path",{fill:"none",stroke:"#fff","stroke-opacity":.16,"stroke-width":.6},lg2),
+        lo:el("path",{fill:"none",stroke:"#000","stroke-opacity":.45,"stroke-width":.8},lg2)};
+      var m=L.th>6?Math.min(3,Math.floor(L.th/5)):0;              // fine laminations inside thick weeks
+      for(var j=1;j<=m;j++) p.lam.push({f:j/(m+1)+(rnd(L.wi*7+j)-.5)*.12,
+        e:el("path",{fill:"none",stroke:"#000","stroke-opacity":.16+rnd(L.wi+j)*.1,"stroke-width":.45},lg2)});
+      return p; });
+    function draw(P,e){ P.e=e; P.g.style.display=e>0?"":"none"; if(!e) return;
+      var pr=dispRow(P.L.wi), nx=dispRow(P.L.wi+1), up=pr.map(function(y,i){ return y+(nx[i]-y)*e; });
+      P.fill.setAttribute("d",area(pr,up)); P.hi.setAttribute("d",line(up)); P.lo.setAttribute("d",line(pr));
+      P.lam.forEach(function(q){ q.e.setAttribute("d",line(pr.map(function(y,i){ return y+(up[i]-y)*q.f; }))); }); }
+    CR.forEach(function(C){ C.g=el("g",{style:"display:none"},crk);
+      C.lt=el("path",{fill:"none",stroke:"#fff","stroke-opacity":.13,"stroke-width":.4,transform:"translate(.7,.3)","stroke-linecap":"round"},C.g);
+      C.dk=el("path",{fill:"none",stroke:"#0b0a08","stroke-opacity":C.op,"stroke-width":C.w,"stroke-linecap":"round","stroke-linejoin":"round"},C.g); });
+    function placeCrack(C){ var d=crackD(C); C.dk.setAttribute("d",d); C.lt.setAttribute("d",d); }
+    FAULTS.forEach(function(f){ f.g=el("g",{style:"display:none"},flt);
+      f.lt=el("path",{fill:"none",stroke:"#fff","stroke-opacity":.16,"stroke-width":.5,transform:"translate("+(f.side*.9)+",0)"},f.g);
+      f.dk=el("path",{fill:"none",stroke:"#0b0a08","stroke-opacity":.85,"stroke-width":1.2,"stroke-linejoin":"round"},f.g);
+      var yTop=B[f.T][Math.round((f.fx-x0)/dx)]-1, d="";        // the fault stops where younger beds drape over it
+      for(var y=H+6;y>yTop;y-=2.5) d+=(d?" L":"M")+xf(f,y).toFixed(1)+","+y.toFixed(1);
+      f.dk.setAttribute("d",d); f.lt.setAttribute("d",d); });
+    function reveal(g2,paths,ms){ g2.style.display=""; paths.forEach(function(p){ var L=p.getTotalLength();
+      p.style.strokeDasharray=L; p.animate([{strokeDashoffset:L},{strokeDashoffset:0}],{duration:ms,easing:"ease-out",fill:"forwards"}); }); }
+    function redraw(){ parts.forEach(function(P){ if(P.e) draw(P,P.e); }); CR.forEach(function(C){ if(C.g.style.display!=="none") placeCrack(C); }); }
+
+    var cap=el("text",{x:W-8,y:12,"text-anchor":"end","font-family":"IBM Plex Mono,monospace","font-size":10,fill:"#8A8781","letter-spacing":"1"},s);
+    if(REDUCE){ act=act.map(function(){ return 1; }); parts.forEach(function(P){ draw(P,1); });
+      CR.forEach(function(C){ C.g.style.display=""; placeCrack(C); }); FAULTS.forEach(function(f){ f.g.style.display=""; }); return; }
+
+    var i2=0, STEP=170, GROW=480, fired=FAULTS.map(function(){ return false; });
+    function grow(P,t0){ return function(ts){ if(gen!==ST2) return; if(t0===null) t0=ts;
+      var e=Math.min(1,(ts-t0)/GROW); draw(P,1-Math.pow(1-e,3)); if(e<1) requestAnimationFrame(grow(P,t0)); }; }
+    function quake(fi){ var f=FAULTS[fi], t0=null;
+      reveal(f.g,[f.dk,f.lt],420);                                // the crack runs up the face as the block slips
+      requestAnimationFrame(function fr(ts){ if(gen!==ST2) return; if(t0===null) t0=ts;
+        var e=Math.min(1,(ts-t0)/420); act[fi]=1-Math.pow(1-e,4); redraw();
+        face.setAttribute("transform","translate("+(e<1?Math.sin(e*46)*(1-e)*1.3:0).toFixed(2)+",0)");
+        if(e<1) requestAnimationFrame(fr); }); }
+    function reset(){ act=act.map(function(){ return 0; }); fired=fired.map(function(){ return false; });
+      parts.forEach(function(P){ draw(P,0); }); CR.forEach(function(C){ C.g.style.display="none"; });
+      FAULTS.forEach(function(f){ f.g.style.display="none"; }); face.removeAttribute("transform"); }
+    function tick(){
+      if(gen!==ST2) return;
+      if(i2>=n){ setTimeout(function(){ if(gen!==ST2) return; g.animate([{opacity:1},{opacity:0}],{duration:800,fill:"forwards"}).onfinish=function(){
+          if(gen!==ST2) return; reset(); g.animate([{opacity:0},{opacity:1}],{duration:10,fill:"forwards"}); i2=0; setTimeout(tick,400); }; },4200); return; }
+      for(var fi=0;fi<FAULTS.length;fi++) if(FAULTS[fi].T===i2 && !fired[fi]){ fired[fi]=true; quake(fi); }
+      requestAnimationFrame(grow(parts[i2],null));
+      CR.forEach(function(C){ if(C.birth===i2){ placeCrack(C); reveal(C.g,[C.dk,C.lt],650); } });
+      var d=dd(parts[i2].L.w.w); cap.textContent=(MON[d.getMonth()]+" "+d.getFullYear()).toUpperCase();
+      i2++; setTimeout(tick,STEP);
+    }
+    reset(); tick();
+  };
 })();
 </script>
 </body>
