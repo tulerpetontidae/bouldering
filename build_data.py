@@ -36,6 +36,32 @@ def excluded(s):
     start = dt.datetime.fromisoformat(s["date"][:16])
     return any(abs(start - dt.datetime.fromisoformat(t)) <= EXCLUDE_SLACK for t, _ in EXCLUDE)
 
+# Garmin sessions that were really one visit (the watch was stopped and
+# restarted). Each group becomes a single session: climbs and rests in order,
+# gym time from the first start to the last end, heart rate weighted by time.
+MERGE = [
+    (24704053834, 24704194379),     # 12 Oct 2026: warm-up, then the main session
+]
+
+def merge_groups(sessions):
+    by_id = {s["id"]: s for s in sessions}
+    used, out = set(), []
+    for group in MERGE:
+        parts = sorted((by_id[i] for i in group if i in by_id), key=lambda s: s["date"])
+        if len(parts) < 2: continue
+        first, last = parts[0], parts[-1]
+        t0 = dt.datetime.fromisoformat(first["date"][:19])
+        t1 = dt.datetime.fromisoformat(last["date"][:19]) + dt.timedelta(seconds=last.get("elapsed") or last["dur"])
+        busy = sum(p["dur"] for p in parts) or 1
+        m = dict(first)
+        m.update({"dur": int((t1 - t0).total_seconds()), "elapsed": int((t1 - t0).total_seconds()),
+                  "climbs": [c for p in parts for c in p["climbs"]], "rests": [r for p in parts for r in p["rests"]],
+                  "cal": sum(p.get("cal") or 0 for p in parts), "load": sum(p.get("load") or 0 for p in parts),
+                  "hr": round(sum((p.get("hr") or 0) * p["dur"] for p in parts) / busy),
+                  "hrx": max(p.get("hrx") or 0 for p in parts), "merged": [p["id"] for p in parts]})
+        out.append(m); used.update(p["id"] for p in parts)
+    return [s for s in sessions if s["id"] not in used] + out
+
 def as_v(c):
     """Return (gradeSortOrder, converted?) or (None, False) if not mappable."""
     if c["sc"] == "VERMIN":
@@ -51,7 +77,7 @@ def monday(d):
     return d - dt.timedelta(days=d.weekday())
 
 raw = json.load(open(RAW))
-sessions = [s for s in raw["sessions"] if s["type"] == "bouldering" and not excluded(s)]
+sessions = merge_groups([s for s in raw["sessions"] if s["type"] == "bouldering" and not excluded(s)])
 sessions.sort(key=lambda s: s["date"])
 
 out_sessions, weeks = [], collections.OrderedDict()
