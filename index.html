@@ -86,6 +86,17 @@
     background:transparent;color:var(--ink-2);border-radius:99px;cursor:pointer}
   .bo-tab:hover{border-color:var(--muted-d);color:var(--ink)}
   .bo-tab[aria-selected="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+  /* a segmented switch for what the bands count - square and recessed, so it doesn't read as one of the tabs */
+  .bo-mixbar{display:flex;justify-content:space-between;align-items:flex-end;gap:10px 16px;flex-wrap:wrap;margin:12px 0 0}
+  .bo-segwrap{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+  @media(max-width:640px){ .bo-segwrap{align-items:flex-start} }
+  .bo-segcap{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  .bo-mixbar .bo-tabs{margin:0}
+  .bo-seg{display:inline-flex;align-items:center;gap:2px;padding:2px;border:1px solid var(--rule);border-radius:3px;background:var(--rule-2)}
+  .bo-seg button{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;padding:5px 11px;border:0;border-radius:2px;
+    background:transparent;color:var(--muted);cursor:pointer}
+  .bo-seg button:hover{color:var(--ink)}
+  .bo-seg button[aria-pressed="true"]{background:var(--paper);color:var(--ink);box-shadow:0 0 0 1px var(--rule)}
   .bo-tab:focus-visible{outline:2px solid var(--s1);outline-offset:2px}
 
   .bo-scroll{overflow-x:auto;padding-bottom:6px;margin-top:14px}
@@ -127,6 +138,11 @@
   .bo-tbl th:first-child,.bo-tbl td:first-child{text-align:left;font-family:var(--body)}
   .bo-tbl tr:hover td{background:var(--rule-2)}
   .bo-wrap{max-height:420px;overflow-y:auto;margin-top:12px}
+  .bo-logwrap{max-height:250px}
+  .bo-logt{table-layout:fixed}
+  .bo-logt th:not(:first-child),.bo-logt td:not(:first-child){padding-left:12px}
+  .bo-logt td:first-child{white-space:normal}
+  .bo-logt th{letter-spacing:.06em}
   .bo-bar{display:inline-block;height:8px;border-radius:2px;background:var(--s1);vertical-align:middle}
   .bo-bar.ghost{background:var(--rule);opacity:.9}
   .bo-comp{font-family:var(--mono);font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;
@@ -172,14 +188,13 @@
     <h1 class="bo-title">Bouldering</h1>
     <p class="bo-sub">I’ve logged nearly every session since I started bouldering. Being able to visualise my progress is the payoff.</p>
     <figure class="bo-art"><div id="bo-art"></div>
-      <figcaption>Each week settles as a layer: thickness is hours in the gym, colour the hardest grade sent. Faults slip at my longest breaks.</figcaption></figure>
+      <figcaption><b>Bouldering efforts as sedimentary rock formation.</b> Each week settles as a layer: thickness is hours in the gym, colour the hardest grade sent. Faults slip at my longest breaks.</figcaption></figure>
     <div class="bo-facts" id="bo-facts"></div>
   </div>
 
   <div class="bo-card">
-    <h2 class="bo-h">Week by week</h2>
-    <p class="bo-p">Each column is a calendar week, each row a grade. Empty columns are weeks I didn't climb —
-       they're kept so the spacing is real time, not just a list of sessions.</p>
+    <h2 class="bo-h">Week by week efforts</h2>
+    <p class="bo-p">Each column is a calendar week, each row a grade.</p>
     <div class="bo-tabs" role="tablist" aria-label="Heatmap measure">
       <button class="bo-tab" role="tab" data-m="att" aria-selected="true">Attempts</button>
       <button class="bo-tab" role="tab" data-m="snd" aria-selected="false">Sends</button>
@@ -197,27 +212,36 @@
   </div>
 
   <div class="bo-card">
-    <h2 class="bo-h">Is the level moving?</h2>
-    <p class="bo-p">Every band is a grade, and its thickness is the share of my attempts sitting there in that
-       3-week window. Progress looks like the pale easy grades draining away at the bottom while the dark ones
-       swell — the whole mix marching upward.</p>
+    <h2 class="bo-h">What is my level?</h2>
+    <p class="bo-p">The top of the chart is the mix of grades I attempt or send (switch on the right). Watch the
+       roster shift as harder problems work their way in, a few at a time.</p>
+    <p class="bo-p">A level is hard to pin down in bouldering, so I track three. <b>Top 5 sends</b>, my favourite:
+       the average of my five hardest sends. <b>Consolidated</b>: the hardest grade I've sent at least three times,
+       so it's routine rather than luck. <b>Hardest send</b>: the single best one, for premature ego boosting.
+       All three over a rolling 3-week window.</p>
     <div class="bo-legend" id="bo-mixleg" style="margin:14px 0 2px"></div>
-    <div class="bo-tabs" role="tablist" aria-label="Level metric" style="margin:12px 0 0">
-      <button class="bo-tab" role="tab" data-lm="top5" aria-selected="true">Top 5 sends</button>
-      <button class="bo-tab" role="tab" data-lm="cons" aria-selected="false">Consolidated</button>
-      <button class="bo-tab" role="tab" data-lm="max" aria-selected="false">Hardest send</button>
+    <div class="bo-mixbar">
+      <div class="bo-tabs" role="tablist" aria-label="Level metric">
+        <button class="bo-tab" role="tab" data-lm="top5" aria-selected="true">Top 5 sends</button>
+        <button class="bo-tab" role="tab" data-lm="cons" aria-selected="false">Consolidated</button>
+        <button class="bo-tab" role="tab" data-lm="max" aria-selected="false">Hardest send</button>
+      </div>
+      <div class="bo-segwrap"><div class="bo-segcap" id="bo-segcap">Bands show</div>
+        <div class="bo-seg" role="group" aria-labelledby="bo-segcap">
+          <button type="button" data-mx="att" aria-pressed="true">Attempts</button>
+          <button type="button" data-mx="snd" aria-pressed="false">Sends</button>
+        </div></div>
     </div>
     <svg class="bo-svg" id="bo-prog" viewBox="0 0 960 410" role="img"
-         aria-label="Share of attempts by grade over time, with the median grade sent"></svg>
+         aria-label="Share of attempts or sends by grade over time, with the grade being sent"></svg>
   </div>
 
   <div class="bo-card">
-    <h2 class="bo-h">What a grade costs</h2>
-    <p class="bo-p">Every time I sent a grade I'd never sent before, plotted against the hours I'd spent in the
-       gym by then — whole sessions, door to door, not just the minutes actually on a boulder.
-       The axis is logarithmic because the spacing is: each new grade has cost a fixed
-       <i>multiple</i> of all the time that came before it, not a fixed number of hours. The dashed half is the
-       same line carried onward, which is exactly as trustworthy as that sounds. Drag it as far as you dare.</p>
+    <h2 class="bo-h">Time till the next level-up?</h2>
+    <p class="bo-p">Every time I sent a new grade, against the hours I'd spent in the gym by then, on a log axis.
+       It lines up suspiciously well on a straight line, so let's take it at its word and extrapolate: when I'll
+       crack the next grade, and when I'll take over the bouldering scene by sending Burden of Dreams. Spoiler:
+       not any time soon.</p>
     <div class="bo-sliders">
       <label class="bo-sl b bo-dream"><span class="bo-key"><i style="background:var(--s2)"></i>Dream as far as
         <b id="bo-dreamv">V10</b></span>
@@ -231,8 +255,7 @@
   <div class="bo-grid">
     <div class="bo-card" style="margin-top:0">
       <h2 class="bo-h">The route roster</h2>
-      <p class="bo-p">Where my sends sat across the grades, as a distribution over a 3-week window. Drag either
-         handle along the timeline to put two moments side by side — progress moves the whole curve right.</p>
+      <p class="bo-p">Where my sends sat across the grades, as a distribution over a 3-week window.</p>
       <div class="bo-sliders">
         <label class="bo-sl"><span class="bo-key"><i style="background:var(--s1)"></i><b id="bo-p1">—</b></span>
           <input type="range" id="bo-r1" min="0" max="0" step="1" aria-label="First comparison window"></label>
@@ -244,9 +267,8 @@
     </div>
 
     <div class="bo-card" style="margin-top:0">
-      <h2 class="bo-h">Where the wall wins</h2>
-      <p class="bo-p">Tried versus sent at each grade. The grade where the rate crosses 50% is a fair
-         description of the level — the last three weeks say where it is now, all time says where it has been.</p>
+      <h2 class="bo-h">Attempts vs sends</h2>
+      <p class="bo-p">Tried versus sent at each grade. The last 3 weeks are a good stand-in for my current level.</p>
       <div class="bo-tabs" role="tablist" aria-label="Send-rate window" style="margin:12px 0 4px">
         <button class="bo-tab" role="tab" data-rw="recent" aria-selected="true">Last 3 weeks</button>
         <button class="bo-tab" role="tab" data-rw="all" aria-selected="false">All time</button>
@@ -263,10 +285,12 @@
   </div>
 
   <div class="bo-card">
-    <h2 class="bo-h">Every session</h2>
-    <p class="bo-p">The full log, newest first. Wall time is seconds actually on the boulder; the rest is rest.</p>
-    <div class="bo-wrap">
-      <table class="bo-tbl">
+    <h2 class="bo-h">Every session log</h2>
+    <p class="bo-p">Newest first. Wall time is minutes actually spent on a boulder (inflated whenever I forget to
+       stop the watch); the rest is rest time.</p>
+    <div class="bo-wrap bo-logwrap">
+      <table class="bo-tbl bo-logt">
+        <colgroup><col style="width:20%"><col span="8" style="width:10%"></colgroup>
         <thead><tr>
           <th>Date</th><th>Tried</th><th>Sent</th><th>Rate</th><th>Hardest</th><th>Median</th>
           <th>Wall</th><th>Rest</th><th>Avg HR</th>
@@ -595,6 +619,7 @@
     var pal=document.documentElement.getAttribute("data-theme")==="dark"?ORD_D:ORD;
     return pal[Math.round(i/(Math.max(1,n-1))*(pal.length-1))];
   }
+  var MIXM="att";                               // what the bands count: attempts or sends
   function drawMix(){
     var svg=document.getElementById("bo-prog");
     var W=960,H=410,PL=40,PR=54;
@@ -614,8 +639,9 @@
     var prev=pts.map(function(){ return 0; });
     gs.forEach(function(g,gi){
       var top=pts.map(function(p,k){
-        var a=p.w.byGrade[g.gs]?p.w.byGrade[g.gs][0]:0;
-        return prev[k] + (p.w.att? a/p.w.att : 0);
+        var j=MIXM==="snd"?1:0, tot=MIXM==="snd"?p.w.snd:p.w.att;
+        var a=p.w.byGrade[g.gs]?p.w.byGrade[g.gs][j]:0;
+        return prev[k] + (tot? a/tot : 0);
       });
       var d="M"+pts.map(function(p,k){ return x(p.i).toFixed(1)+","+y(top[k]).toFixed(1); }).join(" L")+
             " L"+pts.slice().reverse().map(function(p,k){
@@ -857,19 +883,18 @@
     svg.innerHTML=s;
 
     var mult=Math.exp(fit.b);
-    note.innerHTML='Fitted on the '+earned.length+' grades I\u2019ve actually earned since starting, '+
-      gname(earned[0].gs)+'\u2013'+gname(gTop)+' (R\u00b2 '+fit.r2.toFixed(2)+'): each one has cost about <b>'+
-      mult.toFixed(1)+'\u00d7</b> the total gym time of the grade below it. Carried forward at my current <b>'+
-      pace.toFixed(1)+' h a week</b>, that puts '+gname(gTop+1)+' around '+monthYear(dateFor(proj[0].h))+
-      (gMax>gTop+1 ? (' and '+gname(gMax)+' '+farWhen(gMax)) : '')+
-      '. Two things this ignores: I get older, and nobody\u2019s progress is a straight line on a log axis forever.';
+    note.innerHTML='Fitted on the '+earned.length+' grades I\u2019ve actually earned so far ('+
+      gname(earned[0].gs)+'\u2013'+gname(gTop)+', R\u00b2 '+fit.r2.toFixed(2)+'), every new grade has cost me about <b>'+
+      mult.toFixed(1)+'\u00d7</b> all the gym time that came before it. At my current <b>'+
+      pace.toFixed(1)+' h a week</b>, '+gname(gTop+1)+' should land around '+monthYear(dateFor(proj[0].h))+
+      (gMax>gTop+1 ? ('. '+gname(gMax)+' '+farWhen(gMax)) : '')+
+      '.';
     function farWhen(g){
       var hh=fit.at(g), y=dateFor(hh).getFullYear(), yrs=y-t1.getFullYear();
-      var base=(g===BOD?'\u2014 the grade of Burden of Dreams \u2014 ':'')+
-               'after '+Math.round(hh).toLocaleString()+' hours, ';
-      if(y<=2100) return base+'somewhere in '+y;
-      return base+'around '+whenLabel(dateFor(hh))+', roughly '+Math.round(yrs/80).toLocaleString()+
-             ' lifetime'+(Math.round(yrs/80)===1?'':'s')+' from now';
+      var base=(g===BOD?'(yes, Burden of Dreams) ':'')+'needs '+Math.round(hh).toLocaleString()+' hours, ';
+      if(y<=2100) return base+'so pencil it in for '+y;
+      return base+'which is around '+whenLabel(dateFor(hh))+': roughly '+Math.round(yrs/80).toLocaleString()+
+             ' lifetime'+(Math.round(yrs/80)===1?'':'s')+' of climbing. I\u2019ll keep training';
     }
   }
 
@@ -970,6 +995,13 @@
       Array.prototype.forEach.call(document.querySelectorAll(".bo-tab[data-rw]"),function(o){
         o.setAttribute("aria-selected", o===b ? "true":"false"); });
       drawRate();
+    });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-mx]"),function(b){
+    b.addEventListener("click",function(){
+      MIXM=b.getAttribute("data-mx");
+      Array.prototype.forEach.call(document.querySelectorAll("[data-mx]"),function(o){ o.setAttribute("aria-pressed",o===b?"true":"false"); });
+      drawMix();
     });
   });
   Array.prototype.forEach.call(document.querySelectorAll(".bo-tab[data-lm]"),function(b){
