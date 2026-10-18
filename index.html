@@ -621,10 +621,10 @@
   var LM="top5";
 
   /* ---------- grade mix over time ---------- */
-  var ORD=["#86b6ef","#6da7ec","#5598e7","#3987e5","#2a78d6","#256abf","#184f95","#0d366b"];
-  var ORD_D=["#0d366b","#184f95","#1c5cab","#256abf","#2a78d6","#3987e5","#5598e7","#86b6ef"];
+  /* the same grade colours as the rock in the header, in both themes: VB darkest, harder grades brighter */
+  var ORD=["#0d366b","#184f95","#256abf","#2a78d6","#3987e5","#6da7ec","#9ec5f4","#cde2fb"];
   function ordColor(i,n){
-    var pal=document.documentElement.getAttribute("data-theme")==="dark"?ORD_D:ORD;
+    var pal=ORD;
     return pal[Math.round(i/(Math.max(1,n-1))*(pal.length-1))];
   }
   var MIXM="att";                               // what the bands count: attempts or sends
