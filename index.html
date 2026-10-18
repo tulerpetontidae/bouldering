@@ -67,11 +67,18 @@
   .bo-hero>*{grid-column:1}
   .bo-art{grid-column:2;grid-row:1 / span 4;margin:0;align-self:center}
   .bo-art svg{display:block;width:100%;height:auto}
-  .bo-art figcaption{font-size:11px;line-height:1.45;opacity:.55;margin-top:6px;max-width:52ch;margin-left:auto;text-align:right}
+  .bo-foot:empty{display:none}
+  .bo-artkey{display:flex;justify-content:flex-end;align-items:flex-end;flex-wrap:wrap;gap:6px 18px;margin-top:8px;font-family:var(--mono);font-size:9.5px;letter-spacing:.06em}
+  .bo-artkey .grp{display:inline-flex;align-items:flex-end;gap:4px}
+  .bo-artkey .bar i.sw{width:12px;height:7px;opacity:1;border-radius:1px}
+  .bo-artkey .bar{display:inline-flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;line-height:1}
+  .bo-artkey .bar i{display:block;width:12px;background:var(--hero-fg);opacity:.55;border-radius:1px}
+  .bo-art figcaption{font-size:11px;line-height:1.45;color:color-mix(in srgb,var(--hero-fg) 55%,transparent);margin-top:6px;max-width:52ch;margin-left:auto;text-align:right}
   @media(max-width:760px){
     .bo-hero{grid-template-columns:minmax(0,1fr)}
     .bo-art{grid-column:1;grid-row:auto;margin:16px -8px 0}
     .bo-art figcaption{text-align:left;margin:4px 8px 0}
+    .bo-artkey{justify-content:flex-start}
   }
   .bo-fact{font-family:var(--mono);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;opacity:.62}
   .bo-fact b{display:block;font-family:var(--disp);font-weight:800;font-size:30px;letter-spacing:0;opacity:1;margin-top:2px}
@@ -188,7 +195,8 @@
     <h1 class="bo-title">Bouldering</h1>
     <p class="bo-sub">I’ve logged nearly every session since I started bouldering. Being able to visualise my progress is the payoff.</p>
     <figure class="bo-art"><div id="bo-art"></div>
-      <figcaption><b>Bouldering efforts as sedimentary rock formation.</b> Each week settles as a layer: thickness is hours in the gym, colour the hardest grade sent. Faults slip at my longest breaks.</figcaption></figure>
+      <figcaption><b>Bouldering efforts as sedimentary rock formation.</b> Each week settles as a layer: thickness is hours in the gym, colour the hardest grade sent. Faults slip at my longest breaks.
+        <div class="bo-artkey" id="bo-artkey" aria-hidden="true"></div></figcaption></figure>
     <div class="bo-facts" id="bo-facts"></div>
   </div>
 
@@ -954,20 +962,6 @@
       '<div class="bo-fact">Sent<b>'+sends+'</b></div>'+
       '<div class="bo-fact">Hardest<b>'+gname(best)+'</b></div>'+
       '<div class="bo-fact">Time on the wall<b>'+Math.round(wall/3600)+'h</b></div>';
-    var kyu=D.sessions.filter(function(s){ return s.kyu; });
-    document.getElementById("bo-note").innerHTML=
-      'Recorded on a Garmin epix Pro, one entry per boulder — grade, sent or not, seconds on the wall and heart rate. '+
-      'Synced '+D.generated+'.'+
-      (kyu.length?(' 🇯🇵 '+kyu.length+' session'+(kyu.length>1?'s':'')+' ('+
-        kyu.map(function(s){return fdate(s.d);}).join(", ")+') '+
-        'was graded in Japanese kyu; those '+kyu.reduce(function(x,s){return x+s.kyu;},0)+
-        ' boulders are converted to the V-scale with the standard table (5級→V2, 4級→V3, 3級→V4). '+
-        'The conversion is approximate and gym-dependent.'):'')+
-      ' Roped climbing is logged separately and is not on this page.'+
-      (COMPS.length ? ('<br>Competitions: '+COMPS.map(function(c){
-        var nm = c.url ? ('<a href="'+c.url+'" target="_blank" rel="noopener">'+c.name+'</a>') : c.name;
-        return nm+' on '+fdate(c.d)+' '+new Date(c.d).getFullYear()+' — '+c.pts.toLocaleString()+' points';
-      }).join('; ')+'.') : '');
   }
 
   function drawAll(){ drawHeat(); drawMix(); drawCost(); drawPyr(); drawTables(); drawHead(); }
@@ -1079,6 +1073,13 @@
     var hrs=weeks.map(function(w){ return (w.dur||0)/3600; }), SEAM=1.4;
     var tot=hrs.reduce(function(a,h){ return a+(h>0?h:0); },0), seams=hrs.filter(function(h){return !h;}).length;
     var k=(H-52-seams*SEAM)/tot, DIP=.045, i, b;
+    // the key under the caption: one swatch per grade, and bars showing how thick 1, 3 and 6 gym hours are
+    function drawKey(){ var kd=document.getElementById("bo-artkey"); if(!kd) return;
+      var px=k*(s.getBoundingClientRect().width||W)/W;
+      kd.innerHTML='<span class="grp">'+G.map(function(c,q){ return '<span class="bar"><i class="sw" style="background:'+c+'"></i>'+(q===0||q===G.length-1?'V'+q:'&nbsp;')+'</span>'; }).join("")+'</span>'+
+        '<span class="grp">'+[1,3,6].map(function(h){ return '<span class="bar"><i style="height:'+Math.max(1,h*px).toFixed(1)+'px"></i>'+h+'h</span>'; }).join("")+'</span>'; }
+    drawKey(); if(!window.__boKeyRz){ window.__boKeyRz=1; window.addEventListener("resize",function(){ if(window.__boKey) window.__boKey(); }); }
+    window.__boKey=drawKey;
     function top(w){ var g=-1; for(var c in w.cells) if(w.cells[c][1] && +c>g) g=+c; return g; }
     function colOf(g,h){ if(!h) return "#1c1b18"; if(g<1) return "#3b3934"; return gcol(g); }
     function wob(i,a,b){ return Math.sin(i*a+b)+.5*Math.sin(i*a*2.7+b*3.1)+.25*Math.sin(i*a*6.1+b*1.7); }
@@ -1105,7 +1106,7 @@
         var t=th*(1+amp*wob(i*94/NX,fq,ph)/1.75);                  // pinch and swell
         return Math.min(prev[i]-Math.max(th*.22,SEAM*.3), prev[i]-Math.max(th*.22,t)+.28*(m-prev[i])); });   // lows fill faster
       B.push(next);
-      layers.push({wi:wi,w:w,th:th,col:colOf(top(w),hrs[wi]),op:.84+rnd(wi+21)*.16});
+      layers.push({wi:wi,w:w,th:th,col:colOf(top(w),hrs[wi]),op:1});
     });
     var last=B[n];                                                   // weather the top surface: shallow notches and gullies
     for(i=0;i<=NX;i++){ var xi=i*94/NX; last[i]+=Math.abs(wob(xi,.31,4.2))*2.2+Math.max(0,Math.sin(xi*.09+1.3)-.8)*14; }
@@ -1136,7 +1137,7 @@
     el("feColorMatrix",{in:"n",type:"saturate",values:0,result:"g"},fl);
     var ct=el("feComponentTransfer",{in:"g",result:"g2"},fl);
     ["R","G","B"].forEach(function(c){ el("feFunc"+c,{type:"linear",slope:.75,intercept:.5},ct); });
-    el("feBlend",{in:"SourceGraphic",in2:"g2",mode:"multiply",result:"m"},fl);
+    el("feComposite",{in:"SourceGraphic",in2:"g",operator:"arithmetic",k1:0,k2:1,k3:.28,k4:-.14,result:"m"},fl);   // grain around the true colour
     el("feComposite",{in:"m",in2:"SourceGraphic",operator:"in"},fl);
     var lg=el("linearGradient",{id:"st2F",x1:0,x2:1,y1:0,y2:0},defs); sideFade(lg);
     var vg=el("linearGradient",{id:"st2V",x1:0,x2:0,y1:0,y2:1},defs);
@@ -1147,7 +1148,6 @@
     [[0,0],[.45,0],[1,.22]].forEach(function(st){ el("stop",{offset:st[0],"stop-color":"#000","stop-opacity":st[1]},sh); });
     var outer=el("g",{mask:"url(#st2MV)"},s), g=el("g",{mask:"url(#st2MH)"},outer), face=el("g",{},g);
     var rock=el("g",{filter:"url(#grain2)"},face), crk=el("g",{},face), flt=el("g",{},face);
-    el("rect",{x:0,y:0,width:W,height:H,fill:"url(#st2S)"},g);    // the lower face sits in shade
 
     function line(ys){ var d=""; for(var i=0;i<=NX;i++) d+=(i?" L":"M")+X[i].toFixed(1)+","+ys[i].toFixed(1); return d; }
     function area(pr,up){ var d=line(up); for(var i=NX;i>=0;i--) d+=" L"+X[i].toFixed(1)+","+pr[i].toFixed(1); return d+"Z"; }
@@ -1157,7 +1157,7 @@
         lo:el("path",{fill:"none",stroke:"#000","stroke-opacity":.45,"stroke-width":.8},lg2)};
       var m=L.th>6?Math.min(3,Math.floor(L.th/5)):0;              // fine laminations inside thick weeks
       for(var j=1;j<=m;j++) p.lam.push({f:j/(m+1)+(rnd(L.wi*7+j)-.5)*.12,
-        e:el("path",{fill:"none",stroke:"#000","stroke-opacity":.16+rnd(L.wi+j)*.1,"stroke-width":.45},lg2)});
+        e:el("path",{fill:"none",stroke:"#000","stroke-opacity":.2,"stroke-width":.45},lg2)});
       return p; });
     function draw(P,e){ P.e=e; P.g.style.display=e>0?"":"none"; if(!e) return;
       var pr=dispRow(P.L.wi), nx=dispRow(P.L.wi+1), up=pr.map(function(y,i){ return y+(nx[i]-y)*e; });
